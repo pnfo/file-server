@@ -1,0 +1,21 @@
+{
+  "name": "library",
+  "version": "1.0.0",
+  "description": "buddhist books library - search and render",
+  "main": "build-index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "restify": "^8.4.0",
+    "sqlite3": "^4.1.0",
+    "vkbeautify": "^0.99.3",
+    "vue": "^2.6.10",
+    "vue-server-renderer": "^2.6.10"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.4"
+  }
+}

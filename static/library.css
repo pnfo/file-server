@@ -1,0 +1,91 @@
+@font-face {
+    font-family: 'Noto Serif Sinhala';
+    src: url('NotoSerifSinhala-Regular.ttf') format('truetype');
+    font-weight: normal;
+}
+@font-face {
+    font-family: 'Noto Serif Sinhala';
+    src: url('NotoSerifSinhala-Bold.ttf') format('truetype');
+    font-weight: bold;
+}
+
+body {
+    font-family: 'Noto Serif Sinhala';
+    font-size: 14px;
+}
+@media screen and (max-width: 600pt) {
+    td.folders { display: none;  } /* hide the folders column on small screens */
+}
+div.top-container { width: 100%; max-width: 800pt; margin: 0pt auto; height: 100%; display: flex; flex-flow: column; align-content: center;}
+
+table { border: 1px solid black; width: 100%; }
+#search-results table { border: none; }
+thead td { font-weight: bold; padding: 0.3rem; background-color: antiquewhite; }
+tbody tr:nth-child(even) {background-color: whitesmoke; }
+tbody tr:hover { background-color: antiquewhite; }
+td { padding: 0.1rem 0.3rem 0.1rem 0.3rem; word-break: break-word; }
+tbody td.folders { color: rgb(151, 151, 151); }
+tbody td.downloads { text-align: right; }
+
+
+nav { text-align: center; display: flex; align-items: center; justify-content: center;  flex-wrap: wrap;}
+nav.top { font-size: 1.2rem; }
+nav > a.button { margin: 0.15rem 0.25rem 0.15rem 0.25rem; }
+
+a.button {
+    margin: 2pt 1pt 2pt 1pt;
+    text-align:center;
+    background-color: white;
+    padding: 6px 5px 6px 5px;
+    text-decoration: none;
+    line-height: 1;
+    border-radius: 4px;
+    border: 1px solid lightsalmon;
+    box-shadow: 0 3px 3px rgba(0,0,0,0.2);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-items: center;
+}
+a.button:hover {
+    background-color: rgba(255, 160, 122, 0.5);
+}
+a.button:active, a.button.pressed {
+    background-color: gray;
+    box-shadow: none;
+}
+a.button i { color: green; padding: 0 0.4rem 0 0.2rem; }
+a.button.entry span { color: darkblue; } 
+
+.share-icon:hover { visibility: visible; color: blue; cursor: pointer;}
+
+#search-content { margin: 1rem 0rem 1.4rem 0rem; background-color: rgba(105, 192, 167, 0.1);
+    border: 0.5px solid lightslategray; border-radius: 3px; }
+#search-status { font-size: 0.9rem; text-align: center; padding: 0.4rem; color: darkred; font-style: italic;}
+
+#search-bar-div { display: flex; justify-content: center; flex-flow: row nowrap; align-items: center; }
+.search-bar {
+    flex: 1 1;
+    vertical-align: middle;
+    font-family: 'Noto Serif Sinhala';
+    font-size: 1.2rem;
+    margin: 0.2rem 0.2rem 0.2rem 0.2rem;
+    border: 1px solid gray;
+    max-width: 350pt;
+    min-width: 70pt;
+}
+
+/* The snackbar - position it at the bottom and in the middle of the screen */
+#toast {
+    display: none; /* Hidden by default. Visible on click */
+    background-color: black; /* Black background color */
+    color: white; /* White text color */
+    text-align: center; /* Centered text */
+    border-radius: 5pt; /* Rounded borders */
+    padding: 5pt 10pt 5pt 10pt; /* Padding */
+    position: fixed; /* Sit on top of the screen */
+    z-index: 1000; /* Add a z-index if needed */
+    left: 50%; /* Center the snackbar */
+    transform: translateX(-50%);
+    bottom: 30pt; /* 30px from the bottom */
+}
