@@ -9,6 +9,12 @@
  * 
  * 3rd party dependencies
  * npm install restify vue vue-server-renderer sqlite3
+ * 
+ * dev run as follows (windows)
+ * npx nodemon .\node-server.js library-config.json
+ * 
+ * prod run as follows (ubuntu)
+ * pm2 start node-server.js -- library-config.json
  */
 const fs = require('fs'), path = require('path');
 const bi = require('./build-index');
