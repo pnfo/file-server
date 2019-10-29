@@ -80,15 +80,16 @@ const componentList = {
         </table>`,
     },
     'folder': {
-        props: ['folder'],
+        props: ['folder', 'parents'],
         computed: {
             sizeStr: function() { return readableSize(this.folder.size); },
+            url: function() { return [...this.parents, this.folder.name].map(f => f.split(' ').join('-')).join(','); },
         },
         template: `<tr class="folder">
             <td class="name">{{ folder.name }}</td>
             <td class="downloads">{{ folder.num_files }}</td>
             <td class="entries">
-                <a class="button folder" tip="ගොනුව වෙත පිවිසෙන්න" v-bind:href="'./' + folder.name.split(' ').join('-') ">
+                <a class="button folder" tip="ගොනුව වෙත පිවිසෙන්න" :href="'./' + url">
                     <i class="far fa-folder"></i>
                     <span class="entry-details">ගොනුව {{ sizeStr }}</span>
                 </a>
@@ -96,7 +97,7 @@ const componentList = {
         </tr>`,
     },
     'folder-list': {
-        props: ['folders'],
+        props: ['folders', 'parents'],
         template: `<table class="folder-list">
             <thead><tr>
                 <td><i class="fal fa-folders"></i> ගොනුවේ නම</td>
@@ -106,7 +107,7 @@ const componentList = {
             <tbody>
                 <folder
                     v-for="(folder, index) in folders"
-                    v-bind:folder="folder"
+                    v-bind:folder="folder" :parents="parents"
                     v-bind:key="index">
                 </folder>
             </tbody>
@@ -133,7 +134,7 @@ function bookListRenderer(books) {
     return bookList;
 }
 
-function fullPage(books, folders, parentFolders) {
+function fullPage(data) {
     //Vue.component('top-nav', componentList['top-nav']);
     Vue.component('entry', componentList['entry']);
     Vue.component('folder', componentList['folder']);
@@ -141,24 +142,20 @@ function fullPage(books, folders, parentFolders) {
     Vue.component('book', componentList['book']);
     Vue.component('book-list', componentList['book-list']);
     return new Vue({
-        data: {
-            books: books,
-            folders,
-            parentFolders,
-        },
+        data: data,
         template: `<div class="content">      
-            <folder-list v-if="folders.length" v-bind:folders="folders"></folder-list>
+            <folder-list v-if="folders.length" :folders="folders" :parents="parents"></folder-list>
             <book-list v-if="books.length" v-bind:books="books"></book-list>
         </div>`,
     });
 }
 
 // returns a promise
-function pageRenderer(books, folders, parentFolders, context, callback) {
+function pageRenderer(data, callback) {
     const renderer = vsr.createRenderer({
         template: require('fs').readFileSync('./index-template.html', 'utf-8'),
     });
-    renderer.renderToString(fullPage(books, folders, parentFolders), context, callback);
+    renderer.renderToString(fullPage(data), data, callback);
 }
 
 module.exports = { bookListRenderer, pageRenderer, getTypeInfo };

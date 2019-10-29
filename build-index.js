@@ -23,8 +23,9 @@ function parseFileName(fileName) {
     return [result[1].trim(), result[2] || '', result[3]];
 }
 
-const mfBooksList = {}, copyMediafireStats = true;
+let mfBooksList = {}, copyMediafireStats = false;
 function extractMediafireStats() {
+    mfBooksList = {};
     JSON.parse(fs.readFileSync('./data/mediafire-books-list.json', {encoding: 'utf-8'})).forEach(mfBook => {
         mfBook.files.forEach(mfFile => {
             if (mfFile.type == "collection") return;  // discard collections/folders
@@ -66,6 +67,7 @@ async function processFolder(fullPath, parentFolders) {
 // go through all files 
 let dbStats = {};
 async function processFile(fileName, lstat, parentFolders) {
+    dbStats.filesProcessed++;
     let [name, desc, type] = parseFileName(fileName); // primary key
 
     // rewrite names for some files - specially used for html files
@@ -73,7 +75,7 @@ async function processFile(fileName, lstat, parentFolders) {
 
     // check if this row exists - if not add new, else update
     const curRow = await db.getAsync('SELECT * FROM entry WHERE name = ? AND desc = ? AND type = ?', [name, desc, type]);
-    //console.log(curRow);
+
     const url = parentFolders.join('/') + '/' + fileName;
     const size = lstat.size; // in bytes
     const date_added = getDate(lstat.birthtime);
@@ -137,7 +139,7 @@ async function rebuildIndex() {
     db = new dh.DbHandler();
     if (copyMediafireStats) extractMediafireStats();
     rewriteNameFiles = JSON.parse(fs.readFileSync('./data/rewrite-names.json', {encoding: 'utf-8'}));
-    dbStats = {rowsAdded: 0, rowsUpdated: 0, rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
+    dbStats = {filesProcessed: 0, rowsAdded: 0, rowsUpdated: 0, rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
     await processFolder(rootFolder, []);
     await addHtmlLinks();
     await brokenUrlChecker();
@@ -145,6 +147,7 @@ async function rebuildIndex() {
     return dbStats;
 }
 
+module.exports = { rebuildIndex, getDate };
 /*
 rebuildIndex().then((dbStats) => {  
     console.log(`final stats ${JSON.stringify(dbStats)}`);
@@ -154,9 +157,6 @@ rebuildIndex().then((dbStats) => {
         }
     }
 });*/
-
-module.exports = { rebuildIndex };
-
 /** obselete code
 
 const book_to_html = JSON.parse(fs.readFileSync('./data/book-to-html.json', {encoding: 'utf-8'}));

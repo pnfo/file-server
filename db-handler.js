@@ -51,6 +51,14 @@ class DbHandler {
     async getEntryFromId(rowid) {
         return this.getAsync(`SELECT rowid, * FROM entry WHERE rowid = ?`, [rowid]);
     }
+    async getAll() {
+        const rows = await this.allAsync(`SELECT rowid, * FROM entry`, []);
+        return groupRowsByName(rows);
+    }
+    async getRecentlyAdded(pastDate) {
+        const rows = await this.allAsync(`SELECT rowid, * FROM entry WHERE date_added > ?`, [pastDate]);
+        return groupRowsByName(rows);
+    }
     async allAsync(sql, params) {
         return new Promise((resolve, reject) => {
             this.db.all(sql, params, (err, rows) => {

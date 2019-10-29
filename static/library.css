@@ -11,14 +11,15 @@
 
 body {
     font-family: 'Noto Serif Sinhala';
-    font-size: 14px;
+    font-size: 15px;
+    margin: 0px;
 }
-@media screen and (max-width: 600pt) {
+@media screen and (max-width: 500pt) {
     td.folders { display: none;  } /* hide the folders column on small screens */
 }
 div.top-container { width: 100%; max-width: 800pt; margin: 0pt auto; height: 100%; display: flex; flex-flow: column; align-content: center;}
 
-table { border: 1px solid black; width: 100%; }
+table { border: 1px solid black; width: 100%; margin: 0.5rem 0rem 0.5rem 0rem; }
 #search-results table { border: none; }
 thead td { font-weight: bold; padding: 0.3rem; background-color: antiquewhite; }
 tbody tr:nth-child(even) {background-color: whitesmoke; }
@@ -73,19 +74,4 @@ a.button.entry span { color: darkblue; }
     border: 1px solid gray;
     max-width: 350pt;
     min-width: 70pt;
-}
-
-/* The snackbar - position it at the bottom and in the middle of the screen */
-#toast {
-    display: none; /* Hidden by default. Visible on click */
-    background-color: black; /* Black background color */
-    color: white; /* White text color */
-    text-align: center; /* Centered text */
-    border-radius: 5pt; /* Rounded borders */
-    padding: 5pt 10pt 5pt 10pt; /* Padding */
-    position: fixed; /* Sit on top of the screen */
-    z-index: 1000; /* Add a z-index if needed */
-    left: 50%; /* Center the snackbar */
-    transform: translateX(-50%);
-    bottom: 30pt; /* 30px from the bottom */
 }

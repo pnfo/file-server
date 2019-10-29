@@ -64,7 +64,7 @@ async function sendSearchQuery(query) {
     }
 }
 
-const clipb = new ClipboardJS('.share-icon', { //.TOC-text .share-icon
+/*const clipb = new ClipboardJS('.share-icon', { //.TOC-text .share-icon
     text: function(icon) {
         const bookFolder = $(icon).parents('[book-folder]:first').attr('book-folder');
         return `https://pitaka.lk/books/${bookFolder}/${$(icon).attr('file-name') || ''}`;
@@ -81,7 +81,7 @@ function showToast(toastMsg) {
 // old code
 
 
-/*$('.TOC-text .material-icons.parent').click(e => {
+$('.TOC-text .material-icons.parent').click(e => {
     const icon = $(e.currentTarget);
     icon.parent().toggleClass('closed').siblings('.TOC-children').toggle();
     icon.text(icon.text() == 'expand_less' ? 'arrow_downward' : 'expand_less');
