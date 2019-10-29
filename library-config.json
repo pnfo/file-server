@@ -1,0 +1,9 @@
+{
+    "fileTypeStr": "",
+    "httpRoot": "/library",
+    "filesRootFolder": "/datadrive/files/public/library",
+    "serverPort": 8090,
+    "indexHtmlTemplate": "./library/library-template.html",
+    "databaseFilePath": "./library/library.db",
+    "rebuildDataFolder": "./library"
+}

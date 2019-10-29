@@ -45,7 +45,7 @@ async function sendSearchQuery(query) {
     words.push(query); // has english book names too 
 
     statusDiv.html(`<i class="fad fa-spinner fa-spin"></i> සොයමින්... මදක් ඉවසන්න.`);
-    const response = await fetch('/api/search/', {
+    const response = await fetch('../api/search/', {
         method: 'POST', 
         headers: { 'Content-Type': 'text/plain' }, 
         body: JSON.stringify(words)
@@ -81,7 +81,7 @@ function showToast(toastMsg) {
 // old code
 
 
-$('.TOC-text .material-icons.parent').click(e => {
+/*$('.TOC-text .material-icons.parent').click(e => {
     const icon = $(e.currentTarget);
     icon.parent().toggleClass('closed').siblings('.TOC-children').toggle();
     icon.text(icon.text() == 'expand_less' ? 'arrow_downward' : 'expand_less');

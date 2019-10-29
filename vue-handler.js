@@ -40,7 +40,7 @@ const componentList = {
             tipText: function() { return getTypeInfo(this.entry.type)[2]; },
         },
         template: `<a 
-            class="button entry" :entry-id="entry.rowid" :tip="tipText" :url="entry.url" :href="'/download/' + entry.rowid">
+            class="button entry" :entry-id="entry.rowid" :tip="tipText" :url="entry.url" :href="'../download/' + entry.rowid">
                 <i v-bind:class="iconStr"></i>
                 <span class="entry-details">{{ typeStr }} {{ sizeStr }}</span>
             </a>`,
@@ -123,24 +123,23 @@ const componentList = {
     },*/
 }
 
-function bookListRenderer(books) {
-    Vue.component('entry', componentList['entry']);
+function vueBookList(books) {
+    /*Vue.component('entry', componentList['entry']);
     Vue.component('book', componentList['book']);
-    Vue.component('book-list', componentList['book-list']);
-    const bookList = new Vue({
+    Vue.component('book-list', componentList['book-list']);*/
+    return new Vue({
         data: { books },
         template: `<book-list v-if="books.length" v-bind:books="books"></book-list>`,
     });
-    return bookList;
 }
 
-function fullPage(data) {
+function vueFullPage(data) {
     //Vue.component('top-nav', componentList['top-nav']);
-    Vue.component('entry', componentList['entry']);
+    /*Vue.component('entry', componentList['entry']);
     Vue.component('folder', componentList['folder']);
     Vue.component('folder-list', componentList['folder-list']);
     Vue.component('book', componentList['book']);
-    Vue.component('book-list', componentList['book-list']);
+    Vue.component('book-list', componentList['book-list']);*/
     return new Vue({
         data: data,
         template: `<div class="content">      
@@ -150,12 +149,18 @@ function fullPage(data) {
     });
 }
 
-// returns a promise
-function pageRenderer(data, callback) {
-    const renderer = vsr.createRenderer({
-        template: require('fs').readFileSync('./index-template.html', 'utf-8'),
+let vueRenderer;
+function setupVueSSR(htmlTemplateFile) {
+    Vue.component('entry', componentList['entry']);
+    Vue.component('folder', componentList['folder']);
+    Vue.component('folder-list', componentList['folder-list']);
+    Vue.component('book', componentList['book']);
+    Vue.component('book-list', componentList['book-list']);
+    const pageRR = vsr.createRenderer({
+        template: require('fs').readFileSync(htmlTemplateFile, 'utf-8'),
     });
-    renderer.renderToString(fullPage(data), data, callback);
+    const searchRR = vsr.createRenderer();
+    return [pageRR, searchRR];
 }
 
-module.exports = { bookListRenderer, pageRenderer, getTypeInfo };
+module.exports = { vueBookList, vueFullPage, getTypeInfo, setupVueSSR };

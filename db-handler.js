@@ -17,9 +17,8 @@ function groupRowsByName(rows) {
 }
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-const dbPath = './library.db';
 class DbHandler {
-    constructor() {
+    constructor(dbPath) {
         this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, err => {
             if (err) {
                 console.error(`Failed to open ${dbPath}. ${err.message}`);

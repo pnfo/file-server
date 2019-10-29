@@ -10,8 +10,6 @@ const path = require('path');
 const assert = require('assert');
 const dh = require('./db-handler');
 
-const rootFolder = 'D:/ebooks';
-
 const getMapKey = (name, desc, type) => `${name}@${desc}@${type}`;
 const getDate = (date) => date.toISOString().split('T')[0];
 let rewriteNameFiles = {}; // reloaded inside the buildIndex()
@@ -24,9 +22,9 @@ function parseFileName(fileName) {
 }
 
 let mfBooksList = {}, copyMediafireStats = false;
-function extractMediafireStats() {
+function extractMediafireStats(dataFolder) {
     mfBooksList = {};
-    JSON.parse(fs.readFileSync('./data/mediafire-books-list.json', {encoding: 'utf-8'})).forEach(mfBook => {
+    JSON.parse(fs.readFileSync(`${dataFolder}/mediafire-stats.json`, {encoding: 'utf-8'})).forEach(mfBook => {
         mfBook.files.forEach(mfFile => {
             if (mfFile.type == "collection") return;  // discard collections/folders
             const mapKey = getMapKey(mfBook.name, mfFile.desc || '', mfFile.type);
@@ -116,8 +114,8 @@ async function processFile(fileName, lstat, parentFolders) {
 }
 
 // REPLACE = (insert or update) entries for the html links
-async function addHtmlLinks() {
-    const newLinksToAdd = JSON.parse(fs.readFileSync('./data/add-new-links.json', {encoding: 'utf-8'}));
+async function addHtmlLinks(dataFolder) {
+    const newLinksToAdd = JSON.parse(fs.readFileSync(`${dataFolder}/add-new-links.json`, {encoding: 'utf-8'}));
     for (const linkInfo of newLinksToAdd) {
         const params = [linkInfo[0], '', 'link', linkInfo[1], 0, JSON.stringify([linkInfo[2]])];
         // keep existing downloads count and date_added (default 0 and now respectively)
@@ -126,37 +124,42 @@ async function addHtmlLinks() {
     }
 }
 
-async function brokenUrlChecker() {
+async function brokenUrlChecker(rootFolder) {
     const rows = await db.allAsync('SELECT name, desc, type, url FROM entry');
     rows.forEach(row => {
         if (row.type != 'link' && !fs.existsSync(path.join(rootFolder, row.url))) {
             console.error(`broken url detected ${row.name},${row.desc},${row.type}: ${row.url}`);
         }
     });
-}
-
-async function rebuildIndex() {
-    db = new dh.DbHandler();
-    if (copyMediafireStats) extractMediafireStats();
-    rewriteNameFiles = JSON.parse(fs.readFileSync('./data/rewrite-names.json', {encoding: 'utf-8'}));
-    dbStats = {filesProcessed: 0, rowsAdded: 0, rowsUpdated: 0, rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
-    await processFolder(rootFolder, []);
-    await addHtmlLinks();
-    await brokenUrlChecker();
-    db.close();
-    return dbStats;
-}
-
-module.exports = { rebuildIndex, getDate };
-/*
-rebuildIndex().then((dbStats) => {  
-    console.log(`final stats ${JSON.stringify(dbStats)}`);
     if (copyMediafireStats) {
         for (const mapKey in mfBooksList) {
             console.log(`unused mf entry ${mapKey} : ${JSON.stringify(mfBooksList[mapKey])}`);
         }
     }
+}
+
+async function rebuildIndex(dbHandler, filesRootFolder, dataFolder) {
+    db = dbHandler;
+    if (copyMediafireStats) extractMediafireStats(dataFolder);
+    rewriteNameFiles = JSON.parse(fs.readFileSync(`${dataFolder}/rewrite-names.json`, {encoding: 'utf-8'}));
+    dbStats = {filesProcessed: 0, rowsAdded: 0, rowsUpdated: 0, rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
+    await processFolder(filesRootFolder, []);
+    await addHtmlLinks(dataFolder);
+    await brokenUrlChecker(filesRootFolder);
+    return dbStats;
+}
+
+module.exports = { rebuildIndex, getDate };
+
+/*
+// run inline for testing
+db = new dh.DbHandler();
+rebuildIndex().then((dbStats) => {  
+    console.log(`final stats ${JSON.stringify(dbStats)}`);
+    db.close();
 });*/
+
+
 /** obselete code
 
 const book_to_html = JSON.parse(fs.readFileSync('./data/book-to-html.json', {encoding: 'utf-8'}));
