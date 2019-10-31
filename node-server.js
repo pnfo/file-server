@@ -18,6 +18,7 @@
  */
 const fs = require('fs'), path = require('path');
 const bi = require('./build-index');
+const singlish = require('./singlish');
 
 const restify = require('restify');
 const server = restify.createServer({maxParamLength: 1000});
@@ -71,12 +72,11 @@ server.get(`${config.httpRoot}/newly-added/:duration`, function(req, res, next) 
 
 // return page with list of entries in that folder rendered
 server.get(`${config.httpRoot}/folder/:folders`, function(req, res, next) {
-    console.log(req.params);
     let parents = req.params.folders ? req.params.folders.split(',') : [];
     parents = parents.map(folder => folder.split('-').join(' ')); // we replace spaces with -
     db.getFolder(parents).then(([books, folders]) => {
         console.log(`view folder page ${parents}, books found ${books.length}, folders found ${folders.length}`);
-        const data = { title: parents.reverse().join(' < '), books, folders, parents };
+        const data = { title: [config.htmlTitle, ...parents].reverse().join(' < '), books, folders, parents };
         pageRR.renderToString(vh.vueFullPage(data), data, (err, html) => {
             err ? sendError(res, err) : sendHtml(res, html);
         });
@@ -121,7 +121,9 @@ server.get(`${config.httpRoot}/download/:entryId`, function (req, res, next) {
 
 // search index and return rendered html
 server.post(`${config.httpRoot}/api/search/`, function(req, res, next) {
-    const queryTerms = JSON.parse(req.body); //req.params.queryTerms.split(',');
+    //const query = JSON.parse(req.body);
+    // Search all singlish_combinations of translations from roman to sinhala
+    const queryTerms = singlish.getTerms(req.body);
     db.search(queryTerms).then(books => {
         console.log(`number of search query terms ${queryTerms.length}, books found ${books.length}`);
         searchRR.renderToString(vh.vueBookList(books), (err, html) => {

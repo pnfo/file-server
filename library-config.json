@@ -4,6 +4,7 @@
     "filesRootFolder": "/datadrive/files/public/library",
     "serverPort": 8090,
     "indexHtmlTemplate": "./library/library-template.html",
+    "htmlTitle": "පුස්තකාලය",
     "databaseFilePath": "./library/library.db",
     "rebuildDataFolder": "./library"
 }

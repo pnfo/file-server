@@ -1,5 +1,5 @@
 // sinhala unicode -> easy singlish
-var singlish_vowels = [
+const singlish_vowels = [
 	['අ', 'a'],
 	['ආ', 'aa'],
 	['ඇ', 'ae'],
@@ -20,13 +20,13 @@ var singlish_vowels = [
 	['ඐ', 'li, lii'] // sinhala only end
 ];
 
-var singlish_specials = [
+const singlish_specials = [
 	['ඞ්', 'n'],
 	['ං', 'n, m'],
 	['ඃ', 'n, m'] // sinhala only
 ];
 
-var singlish_consonants = [
+const singlish_consonants = [
 	['ක', 'k'],
 	['ග', 'g'],
 	['ච', 'c, ch'],
@@ -71,7 +71,7 @@ var singlish_consonants = [
 ];
 
 // sinh before, sinh after, roman after
-var singlish_combinations = [
+const singlish_combinations = [
 	['්', ''], //ක්
 	['', 'a'], //ක
 	['ා', 'a, aa'], //කා
@@ -120,17 +120,17 @@ var singlish_combinations = [
 	['ෳ', 'li, lii'] // sinhala only end
 ];
 
-var singlishMapping = [];
-var maxSinglishKeyLen = 0;
+const singlishMapping = {};
+let maxSinglishKeyLen = 0;
 function addToSinglishMapping(values, pSinhStr, pRomanStr) {
-	$.each(values, function (_1, pair) {
+	values.forEach(pair => {
 		sinh = pair[0] + pSinhStr;
 
-		romans = pair[1].split(',');
-		pRomans = pRomanStr.split(',');
-		$.each(romans, function (_2, roman) {
-			$.each(pRomans, function (_2, pRoman) {
-				mapIndex = roman.trim() + pRoman.trim();
+		const romans = pair[1].split(',');
+		const pRomans = pRomanStr.split(',');
+		romans.forEach(roman => {
+			pRomans.forEach(pRoman => {
+				const mapIndex = roman.trim() + pRoman.trim();
 				if (mapIndex in singlishMapping) {
 					singlishMapping[mapIndex].push(sinh);
 				} else {
@@ -144,55 +144,51 @@ function addToSinglishMapping(values, pSinhStr, pRomanStr) {
 
 addToSinglishMapping(singlish_vowels, '', '');
 addToSinglishMapping(singlish_specials, '', '');
-$.each(singlish_combinations, function(i, combi) {
+singlish_combinations.forEach(combi => {
 	addToSinglishMapping(singlish_consonants, combi[0], combi[1]);
 });
-console.log(singlishMapping);
-console.log('maxSinglishKeyLen: '+ maxSinglishKeyLen);
+console.log(`singlish map initialized. maxSinglishKeyLen: ${maxSinglishKeyLen}`);
 
 
 function getPossibleMatches(input) {
-	var matches = [];
-	for (var len = 1; len <= maxSinglishKeyLen && len <= input.length; len++) {
-		var prefix = input.slice(0, len); var rest = input.slice(len);
-		matches = matches.concat(permuteMatches(prefix, rest));
+	let matches = [];
+	for (let len = 1; len <= maxSinglishKeyLen && len <= input.length; len++) {
+		const prefix = input.slice(0, len); 
+		const rest = input.slice(len);
+		matches.push(...(permuteMatches(prefix, rest)));
 	}
 	// remove two consecutive hals that do not occur in sinhala - reduce the number of matches to prevent
 	// http get request from exploding
-	matches = matches.filter(function(match) { return !/[ක-ෆ]්[ක-ෆ]්/g.exec(match); });
+	matches = matches.filter(match => !(/[ක-ෆ]්[ක-ෆ]්/.test(match)) );
 	return matches;
 }
 
 function permuteMatches(prefix, rest) {
 	// if prefix is all sinhala  then pass through the prefix - this allows sinhala and singlish mixing and ending dot
-	var prefixMappings = isSinglishQuery(prefix) ? singlishMapping[prefix] : [prefix];
+	const prefixMappings = isSinglishQuery(prefix) ? singlishMapping[prefix] : [prefix];
 	if (!prefixMappings) { // recursion ending condition
 		return [];
 	}
-	if (!rest) {  // recursion ending condition
+	if (!rest.length) {  // recursion ending condition
 		return prefixMappings;
 	}
-	var restMappings = getPossibleMatches(rest);
-	var fullMappings = [];
-	$.each(restMappings, function (_1, restM) {
-		$.each(prefixMappings, function (_2, prefixM) {
-			fullMappings.push(prefixM + restM);
-		});
-	});
+	const restMappings = getPossibleMatches(rest);
+	const fullMappings = [];
+	restMappings.forEach(restM =>
+		prefixMappings.forEach(prefixM =>
+			fullMappings.push(prefixM + restM)
+		)
+	);
 	return fullMappings;
 }
 
 function isSinglishQuery(query) {
-	var A = "A".charCodeAt(0);
-	var Z = "Z".charCodeAt(0);
-	var a = "a".charCodeAt(0);
-	var z = "z".charCodeAt(0);
-
-	for (var i = 0; i < query.length; i++) {
-		var c = query.charCodeAt(i);
-		if ((c <= Z && c >= A) || (c <= z && c >= a)) {
-			return true;
-		}
-	}
-	return false;
+	return /[A-Za-z]/.test(query);
 }
+function getTerms(query) {
+	const queryTerms = isSinglishQuery(query) ? getPossibleMatches(query) : [];
+	queryTerms.push(query); // has english book names too 
+	return queryTerms;
+}
+
+module.exports = { getTerms };

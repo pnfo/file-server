@@ -34,21 +34,20 @@ async function performSearch(e) {
     this.scheduleSearchIndex(query); // delay to prevent multiple queries being sent when typing
 }
 
+function isSinglishQuery(query) {
+	return /[A-Za-z]/.test(query);
+}
 function scheduleSearchIndex(query) {
     if (requestTimer) clearTimeout(requestTimer);
     requestTimer = setTimeout(() => sendSearchQuery(query), resultSettings.searchDelay);
 }
 
 async function sendSearchQuery(query) {
-    // Search all singlish_combinations of translations from roman to sinhala
-    var words = isSinglishQuery(query) ? getPossibleMatches(query) : [];
-    words.push(query); // has english book names too 
-
     statusDiv.html(`<i class="fad fa-spinner fa-spin"></i> සොයමින්... මදක් ඉවසන්න.`);
     const response = await fetch('../api/search/', {
         method: 'POST', 
         headers: { 'Content-Type': 'text/plain' }, 
-        body: JSON.stringify(words)
+        body: query, //JSON.stringify(words)
     });
     const resultsHtml = await response.text();
     //console.log(resultsHtml);

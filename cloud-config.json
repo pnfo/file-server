@@ -1,0 +1,10 @@
+{
+    "fileTypeStr": "",
+    "httpRoot": "/cloud",
+    "filesRootFolder": "D:/ebooks",
+    "serverPort": 8091,
+    "indexHtmlTemplate": "./cloud/cloud-template.html",
+    "htmlTitle": "cloud",
+    "databaseFilePath": "./cloud/cloud.db",
+    "rebuildDataFolder": "./cloud"
+}

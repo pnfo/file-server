@@ -1,7 +1,11 @@
-// read the original download counts from the mediafire
-// read the directory structure and the files
-// create entries in the sqlite db - if not already existing
-// restart the node server - so the updated db files is used
+/**
+ * Read the directory structure and the files and create/update entries in the sqlite db
+ * Filename has {rowid} which maps to the rowid in the db
+ * GUIDE
+ * File name format - name[desc]{rowid}.type
+ * Only specify {rowid} if you need to replace/update an exisiting file/folder with a new file/folder
+ * For new files keep the {rowid} empty.
+ */
 "use strict";
 
 const fs = require('fs');
@@ -10,15 +14,27 @@ const path = require('path');
 const assert = require('assert');
 const dh = require('./db-handler');
 
-const getMapKey = (name, desc, type) => `${name}@${desc}@${type}`;
+const getMFMapKey = (name, desc, type) => `${name}@${desc}@${type}`;
 const getDate = (date) => date.toISOString().split('T')[0];
 let rewriteNameFiles = {}; // reloaded inside the buildIndex()
 let db;
 
 function parseFileName(fileName) {
-    var result = /^([^\[]+)(?:\[(.+)\])?\.(.+)$/g.exec(fileName);
-    if (!result) console.error(`Filename ${fileName} can not be parsed`);
-    return [result[1].trim(), result[2] || '', result[3]];
+    // name[desc]{rowid}.type - [desc] is optional, {rowid} will be filled by the buildIndex
+    const res = /^(.+?)(?:\[(.*)\])?(?:\{(\d+)\})?\.(\w+)$/.exec(fileName);
+    if (!res) console.error(`File name ${fileName} can not be parsed`);
+    return [res[1].trim(), res[2] || '', res[3] || 0, res[4]];
+}
+function parseFolderName(fileName) { // same as above without type
+    const res = /^(.+?)(?:\[(.*)\])?(?:\{(\d+)\})?$/.exec(fileName);
+    if (!res) console.error(`Folder name ${fileName} can not be parsed`);
+    return [res[1].trim(), res[2] || '', res[3] || 0, 'coll'];
+}
+function createFileName(name, desc, rowid, type) {
+    desc = desc ? `[${desc}]` : '';
+    rowid = rowid ? `{${rowid}}` : '';
+    type = type != 'coll' ? `.${type}` : '';
+    return `${name}${desc}${rowid}${type}`;
 }
 
 let mfBooksList = {}, copyMediafireStats = false;
@@ -27,7 +43,7 @@ function extractMediafireStats(dataFolder) {
     JSON.parse(fs.readFileSync(`${dataFolder}/mediafire-stats.json`, {encoding: 'utf-8'})).forEach(mfBook => {
         mfBook.files.forEach(mfFile => {
             if (mfFile.type == "collection") return;  // discard collections/folders
-            const mapKey = getMapKey(mfBook.name, mfFile.desc || '', mfFile.type);
+            const mapKey = getMFMapKey(mfBook.name, mfFile.desc || '', mfFile.type);
             assert(!mfBooksList[mapKey], `${mapKey} already exists in the mfBookList`);
             mfBooksList[mapKey] = {
                 'date_added': mfFile.time,
@@ -47,70 +63,93 @@ function getIgnoreFiles(fullPath) {
     return iList;
 }
 
-async function processFolder(fullPath, parentFolders) {
+// go through all files 
+let dbStats = {};
+async function processFilesInFolder(fullPath, parentFolder) {
     const filesList = fs.readdirSync(fullPath);
     const ignoreFileList = getIgnoreFiles(fullPath);
     for (const fileName of filesList) {
         if (ignoreFileList.indexOf(fileName) >= 0) continue;
-        const newPath = path.join(fullPath, fileName);
-        const lstat = fs.lstatSync(newPath);
+        const filePath = path.join(fullPath, fileName);
+        const lstat = fs.lstatSync(filePath);
+
+        let addedRowid, newFileName;
         if (lstat.isDirectory()) {
-            await processFolder(newPath, [...parentFolders, fileName]); // recursively process sub folders
+            [addedRowid, newFileName] = await processFolder(fileName, lstat, parentFolder);
+            await processFilesInFolder(filePath, addedRowid); // recursively process sub folders
         } else {
-            await processFile(fileName, lstat, parentFolders);
+            [addedRowid, newFileName] = await processFile(fileName, lstat, parentFolder);
         }
+        
+        // rename the processed file/folder
+        if (newFileName != fileName) {
+            console.log(`renaming ${fileName} -> ${newFileName}`);
+            fs.renameSync(path.join(fullPath, fileName), path.join(fullPath, newFileName));
+        }
+        dbStats.entriesProcessed++;
     }
 }
 
-// go through all files 
-let dbStats = {};
-async function processFile(fileName, lstat, parentFolders) {
-    dbStats.filesProcessed++;
-    let [name, desc, type] = parseFileName(fileName); // primary key
-
-    // rewrite names for some files - specially used for html files
-    if (rewriteNameFiles[fileName]) name = rewriteNameFiles[fileName];
-
-    // check if this row exists - if not add new, else update
-    const curRow = await db.getAsync('SELECT * FROM entry WHERE name = ? AND desc = ? AND type = ?', [name, desc, type]);
-
-    const url = parentFolders.join('/') + '/' + fileName;
-    const size = lstat.size; // in bytes
-    const date_added = getDate(lstat.birthtime);
-    const folders = JSON.stringify(parentFolders);
-
-    if (curRow) {
-        // update existing row
-        if (curRow.url != url || curRow.folders != folders || curRow.size != size) { 
-            // update url, folders. if size changed, update the date too
-            const setSize = (curRow.size != size) ? ', size = ?, date_added = ?' : '';
-            const params = (curRow.size != size) ? [url, folders, size, date_added] : [url, folders];
-            await db.runAsync(`UPDATE entry SET url = ?, folders = ? ${setSize} WHERE name = ? AND desc = ? AND type = ?`, [...params, name, desc, type]);
-            dbStats.rowsUpdated++;
-        }
-        return;
+async function processFolder(fileName, lstat, parentFolder) {
+    let [name, desc, rowid, type] = parseFolderName(fileName);
+    
+    if (rowid) { // update row
+        const curRow = await db.getAsync('SELECT * FROM entry2 WHERE rowid = ?', [rowid]);
+        if (curRow) { 
+            // one the four fields name,desc,folders,date_added may or may not have changed.
+            // set is_deleted to false too - in case a deleted folder was brought back again
+            const params = [name, desc, "coll", parentFolder, 0, rowid]
+            await db.runAsync('UPDATE entry2 SET name = ?, desc = ?, type = ?, folder = ?, is_deleted = ? WHERE rowid = ?', params);
+            dbStats.foldersUpdated++;
+            return [rowid, createFileName(name, desc, rowid, type)]
+        } // if the rowid does not exist we need to add it
     }
+
+    // need to create a new row
+    const newRow = [name, desc, "coll", parentFolder, getDate(lstat.birthtime)];
+    rowid = await db.runAsync('INSERT INTO entry2(name, desc, type, folder, date_added) VALUES (?,?,?,?,?)', newRow);
+    dbStats.foldersAdded++;
+    
+    return [rowid, createFileName(name, desc, rowid, type)];
+}
+
+
+async function processFile(fileName, lstat, folder) {
+    let [name, desc, rowid, type] = parseFileName(fileName);
+    const size = lstat.size; // in bytes
+
+    if (rowid) { // update existing row
+        const curRow = await db.getAsync('SELECT * FROM entry2 WHERE rowid = ?', [rowid]);
+        if (curRow) { 
+            // update all except the downloads and date_added - in many cases the update is unnecessary as the fields are not changed
+            // but will have to check each field to see if an update is needed - so update all anyway
+            const params = [ name, desc, type, folder, size, 0, rowid ];
+            await db.runAsync(`UPDATE entry2 SET name = ?, desc = ?, type = ?, folder = ?, size = ?, is_deleted = ? WHERE rowid = ?`, params);
+            dbStats.filesUpdated++;
+            return [rowid, createFileName(name, desc, rowid, type)];
+        } // if the rowid does not exist we need add a new row
+    } 
 
     // new row needs to be added
-    const downloads = 0;
-    let newRow = [ name, desc, type, url, size ]; 
+    let newRow = [ name, desc, type, folder, size]; 
 
-    // 1) if in mediafire - copy the stats 2) else create a new entry in db
-    const mapKey = getMapKey(name, desc, type);
-    if (!mfBooksList[mapKey]) {
-        if (copyMediafireStats) console.log(`new file not in mediafire found ${mapKey}`);
-        newRow = [...newRow, date_added, downloads, folders, '{}'];
-        dbStats.rowsNotFoundInMF++;
-    } else {
-        // copy over the date, downloads and old_url
+    // 1) if in mediafire copy over the date, downloads and old_url
+    const mapKey = getMFMapKey(name, desc, type);
+    if (mfBooksList[mapKey]) {
         const mfBook = mfBooksList[mapKey];
-        newRow = [...newRow, getDate(new Date(mfBook.date_added)), mfBook.downloads, folders, JSON.stringify({old_url: mfBook.old_url})];
+        newRow = [...newRow, getDate(new Date(mfBook.date_added)), mfBook.downloads, JSON.stringify({old_url: mfBook.old_url})];
         delete mfBooksList[mapKey]; // delete used so unused can be tracked
         dbStats.rowsFoundInMF++;
+    } else {
+        if (copyMediafireStats) console.log(`new file not in mediafire found ${mapKey}`);
+        newRow = [...newRow, getDate(lstat.birthtime), 0, '{}'];
+        dbStats.rowsNotFoundInMF++;
     }
 
-    await db.runAsync('INSERT INTO entry(name, desc, type, url, size, date_added, downloads, folders, extra_prop) VALUES (?,?,?,?,?,?,?,?,?)', newRow);
-    dbStats.rowsAdded++;
+    rowid = await db.runAsync('INSERT INTO entry2(name, desc, type, folder, size, date_added, downloads, extra_prop) VALUES (?,?,?,?,?,?,?,?)', newRow);
+    dbStats.filesAdded++;
+
+    return [rowid, createFileName(name, desc, rowid, type)];
 }
 
 // REPLACE = (insert or update) entries for the html links
@@ -125,7 +164,7 @@ async function addHtmlLinks(dataFolder) {
 }
 
 async function brokenUrlChecker(rootFolder) {
-    const rows = await db.allAsync('SELECT name, desc, type, url FROM entry');
+    const rows = await db.allAsync('SELECT name, desc, type, folder FROM entry2');
     rows.forEach(row => {
         if (row.type != 'link' && !fs.existsSync(path.join(rootFolder, row.url))) {
             console.error(`broken url detected ${row.name},${row.desc},${row.type}: ${row.url}`);
@@ -141,23 +180,23 @@ async function brokenUrlChecker(rootFolder) {
 async function rebuildIndex(dbHandler, filesRootFolder, dataFolder) {
     db = dbHandler;
     if (copyMediafireStats) extractMediafireStats(dataFolder);
-    rewriteNameFiles = JSON.parse(fs.readFileSync(`${dataFolder}/rewrite-names.json`, {encoding: 'utf-8'}));
-    dbStats = {filesProcessed: 0, rowsAdded: 0, rowsUpdated: 0, rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
-    await processFolder(filesRootFolder, []);
-    await addHtmlLinks(dataFolder);
-    await brokenUrlChecker(filesRootFolder);
+    //rewriteNameFiles = JSON.parse(fs.readFileSync(`${dataFolder}/rewrite-names.json`, {encoding: 'utf-8'}));
+    dbStats = {entriesProcessed: 0, filesAdded: 0, filesUpdated: 0, foldersAdded: 0, foldersUpdated: 0, rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
+    await processFilesInFolder(filesRootFolder, 0);
+    //await addHtmlLinks(dataFolder);
+    //await brokenUrlChecker(filesRootFolder);
     return dbStats;
 }
 
 module.exports = { rebuildIndex, getDate };
 
-/*
+
 // run inline for testing
-db = new dh.DbHandler();
-rebuildIndex().then((dbStats) => {  
+db = new dh.DbHandler('./cloud/cloud.db');
+rebuildIndex(db, 'D:/ebooks', './cloud').then((dbStats) => {  
     console.log(`final stats ${JSON.stringify(dbStats)}`);
     db.close();
-});*/
+});
 
 
 /** obselete code
