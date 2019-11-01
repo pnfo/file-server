@@ -19,24 +19,6 @@ const getDate = (date) => date.toISOString().split('T')[0];
 let rewriteNameFiles = {}; // reloaded inside the buildIndex()
 let db;
 
-function parseFileName(fileName) {
-    // name[desc]{rowid}.type - [desc] is optional, {rowid} will be filled by the buildIndex
-    const res = /^(.+?)(?:\[(.*)\])?(?:\{(\d+)\})?\.(\w+)$/.exec(fileName);
-    if (!res) console.error(`File name ${fileName} can not be parsed`);
-    return [res[1].trim(), res[2] || '', res[3] || 0, res[4]];
-}
-function parseFolderName(fileName) { // same as above without type
-    const res = /^(.+?)(?:\[(.*)\])?(?:\{(\d+)\})?$/.exec(fileName);
-    if (!res) console.error(`Folder name ${fileName} can not be parsed`);
-    return [res[1].trim(), res[2] || '', res[3] || 0, 'coll'];
-}
-function createFileName(name, desc, rowid, type) {
-    desc = desc ? `[${desc}]` : '';
-    rowid = rowid ? `{${rowid}}` : '';
-    type = type != 'coll' ? `.${type}` : '';
-    return `${name}${desc}${rowid}${type}`;
-}
-
 let mfBooksList = {}, copyMediafireStats = false;
 function extractMediafireStats(dataFolder) {
     mfBooksList = {};
@@ -91,7 +73,7 @@ async function processFilesInFolder(fullPath, parentFolder) {
 }
 
 async function processFolder(fileName, lstat, parentFolder) {
-    let [name, desc, rowid, type] = parseFolderName(fileName);
+    let [name, desc, rowid, type] = dh.parseFileName(fileName);
     
     if (rowid) { // update row
         const curRow = await db.getAsync('SELECT * FROM entry2 WHERE rowid = ?', [rowid]);
@@ -101,7 +83,7 @@ async function processFolder(fileName, lstat, parentFolder) {
             const params = [name, desc, "coll", parentFolder, 0, rowid]
             await db.runAsync('UPDATE entry2 SET name = ?, desc = ?, type = ?, folder = ?, is_deleted = ? WHERE rowid = ?', params);
             dbStats.foldersUpdated++;
-            return [rowid, createFileName(name, desc, rowid, type)]
+            return [rowid, dh.createFileName(name, desc, rowid, type)]
         } // if the rowid does not exist we need to add it
     }
 
@@ -110,12 +92,12 @@ async function processFolder(fileName, lstat, parentFolder) {
     rowid = await db.runAsync('INSERT INTO entry2(name, desc, type, folder, date_added) VALUES (?,?,?,?,?)', newRow);
     dbStats.foldersAdded++;
     
-    return [rowid, createFileName(name, desc, rowid, type)];
+    return [rowid, dh.createFileName(name, desc, rowid, type)];
 }
 
 
 async function processFile(fileName, lstat, folder) {
-    let [name, desc, rowid, type] = parseFileName(fileName);
+    let [name, desc, rowid, type] = dh.parseFileName(fileName);
     const size = lstat.size; // in bytes
 
     if (rowid) { // update existing row
@@ -126,7 +108,7 @@ async function processFile(fileName, lstat, folder) {
             const params = [ name, desc, type, folder, size, 0, rowid ];
             await db.runAsync(`UPDATE entry2 SET name = ?, desc = ?, type = ?, folder = ?, size = ?, is_deleted = ? WHERE rowid = ?`, params);
             dbStats.filesUpdated++;
-            return [rowid, createFileName(name, desc, rowid, type)];
+            return [rowid, dh.createFileName(name, desc, rowid, type)];
         } // if the rowid does not exist we need add a new row
     } 
 
@@ -149,7 +131,7 @@ async function processFile(fileName, lstat, folder) {
     rowid = await db.runAsync('INSERT INTO entry2(name, desc, type, folder, size, date_added, downloads, extra_prop) VALUES (?,?,?,?,?,?,?,?)', newRow);
     dbStats.filesAdded++;
 
-    return [rowid, createFileName(name, desc, rowid, type)];
+    return [rowid, dh.createFileName(name, desc, rowid, type)];
 }
 
 // REPLACE = (insert or update) entries for the html links
@@ -164,12 +146,15 @@ async function addHtmlLinks(dataFolder) {
 }
 
 async function brokenUrlChecker(rootFolder) {
-    const rows = await db.allAsync('SELECT name, desc, type, folder FROM entry2');
-    rows.forEach(row => {
-        if (row.type != 'link' && !fs.existsSync(path.join(rootFolder, row.url))) {
-            console.error(`broken url detected ${row.name},${row.desc},${row.type}: ${row.url}`);
+    const rows = await db.allAsync('SELECT rowid, name, desc, type, folder FROM entry2 WHERE is_deleted = ?', [0]);
+    for (let row of rows) {
+        const url = path.join(rootFolder, db.getUrl(row));
+        if (row.type != 'link' && !fs.existsSync(url)) {
+            console.error(`file ${url} does not exist. marking ${row.rowid} as deleted`);
+            await db.runAsync(`UPDATE entry2 SET is_deleted = ? WHERE rowid = ?`, [1]);
+            dbStats.markedAsDeleted++;
         }
-    });
+    }
     if (copyMediafireStats) {
         for (const mapKey in mfBooksList) {
             console.log(`unused mf entry ${mapKey} : ${JSON.stringify(mfBooksList[mapKey])}`);
@@ -181,10 +166,11 @@ async function rebuildIndex(dbHandler, filesRootFolder, dataFolder) {
     db = dbHandler;
     if (copyMediafireStats) extractMediafireStats(dataFolder);
     //rewriteNameFiles = JSON.parse(fs.readFileSync(`${dataFolder}/rewrite-names.json`, {encoding: 'utf-8'}));
-    dbStats = {entriesProcessed: 0, filesAdded: 0, filesUpdated: 0, foldersAdded: 0, foldersUpdated: 0, rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
+    dbStats = {entriesProcessed: 0, filesAdded: 0, filesUpdated: 0, foldersAdded: 0, foldersUpdated: 0, markedAsDeleted: 0,
+         rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
     await processFilesInFolder(filesRootFolder, 0);
-    //await addHtmlLinks(dataFolder);
-    //await brokenUrlChecker(filesRootFolder);
+    await db.initFolderStructure(); // since the folders may have changed
+    await brokenUrlChecker(filesRootFolder);
     return dbStats;
 }
 
@@ -192,11 +178,15 @@ module.exports = { rebuildIndex, getDate };
 
 
 // run inline for testing
-db = new dh.DbHandler('./cloud/cloud.db');
-rebuildIndex(db, 'D:/ebooks', './cloud').then((dbStats) => {  
+async function runRebuildIndex() {
+    db = new dh.DbHandler('./cloud/cloud.db');
+    await db.init();
+    await rebuildIndex(db, 'D:/ebooks', './cloud')
     console.log(`final stats ${JSON.stringify(dbStats)}`);
     db.close();
-});
+}
+//runRebuildIndex();
+
 
 
 /** obselete code

@@ -15,6 +15,25 @@
  */
 
 const sqlite3 = require('sqlite3');
+const path = require('path');
+
+function parseFileName(fileName) {
+    // name[desc]{rowid}.type - [desc] is optional, {rowid} will be filled by the buildIndex
+    const res = /^(.+?)(?:\[(.*)\])?(?:\{(\d+)\})?(?:\.(\w+))?$/.exec(fileName);
+    if (!res) console.error(`File name ${fileName} can not be parsed`);
+    return [res[1].trim(), res[2] || '', res[3] || 0, res[4] || 'coll'];
+}
+/*function parseFolderName(fileName) { // same as above without type
+    const res = /^(.+?)(?:\[(.*)\])?(?:\{(\d+)\})?$/.exec(fileName);
+    if (!res) console.error(`Folder name ${fileName} can not be parsed`);
+    return [res[1].trim(), res[2] || '', res[3] || 0, 'coll'];
+}*/
+function createFileName(name, desc, rowid, type) {
+    desc = desc ? `[${desc}]` : '';
+    rowid = rowid ? `{${rowid}}` : '';
+    type = type != 'coll' ? `.${type}` : '';
+    return `${name}${desc}${rowid}${type}`;
+}
 
 function groupRowsByName(rows) {
     const rowGs = {};
@@ -42,8 +61,36 @@ class DbHandler {
                 throw err;
             }
         });
-        //sqlite3.sqlite3_limit(this.db, sqlite3.SQLITE_LIMIT_EXPR_DEPTH, 10000);
     }
+    async initFolderStructure() {
+        const rowid2Row = {};
+        this.parentsMap = {};
+        this.childrenIdMap = {};
+        this.folderPaths = {};
+
+        const rows = await this.allAsync(`SELECT rowid, name, desc, type, folder FROM entry2 WHERE type = ? AND is_deleted = ?`, ['coll', 0]);
+        rows.forEach(row => {
+            rowid2Row[row.rowid] = row;
+            this.childrenIdMap[row.rowid] = [row.rowid];
+         });
+        rows.forEach(row => {
+            const child = row.rowid;
+            this.parentsMap[child] = [row];
+            while (row.folder != 0) { 
+                this.childrenIdMap[row.folder].push(row.rowid);
+                row = rowid2Row[row.folder];
+                this.parentsMap[child].push(row);
+            }
+        });
+        for (let [rowid, parents] of Object.entries(this.parentsMap)) {
+            parents.reverse(); // in-place - order bigger to smaller
+            this.folderPaths[rowid] = parents.map(p => createFileName(p.name, p.desc, p.rowid, p.type)).join('/');
+        }
+    }
+    getUrl(row) {
+        return path.join(this.folderPaths[row.folder] || '', createFileName(row.name, row.desc, row.rowid, row.type));
+    }
+
     async search(terms) { // folders are not searched
         // sqlite will error if number of experessions is more than 1000, so do in batches
         const batchSize = 800, finalRows = []; 
@@ -65,37 +112,39 @@ class DbHandler {
         const rows = await this.allAsync(`SELECT rowid, * FROM entry WHERE folders = ?`, [JSON.stringify(folders)]);
         return [ groupRowsByName(rows), folderRows ];
     }
-    async incrementDownloads(rowid) {
-        return this.runAsync(`UPDATE entry SET downloads = downloads + 1 WHERE rowid = ?`, [rowid]);
+
+    async incrementDownloads(rowid) { // must be a file
+        return this.runAsync(`UPDATE entry2 SET downloads = downloads + 1 WHERE rowid = ?`, [rowid]);
     }
-    async getEntryFromId(rowid) {
-        return this.getAsync(`SELECT rowid, * FROM entry WHERE rowid = ?`, [rowid]);
+
+    async getEntry(rowid) {
+        return this.getAsync(`SELECT rowid, * FROM entry2 WHERE rowid = ?`, [rowid]);
+        // in case of coll, parents contains itself
+        //return [entry, this.parentsMap[entry.type == 'coll' ? entry.rowid : entry.folder]];
     }
-    async getAll() {
-        const rows = await this.allAsync(`SELECT rowid, * FROM entry`, []);
-        return groupRowsByName(rows);
+
+    async getFolderGeneric(rowid, folderIds, pastDate = '0') { // must be folder
+        const rows = await this.allAsync(`SELECT e.rowid, e.*, e2.name AS folder_name FROM entry2 e 
+                                        INNER JOIN entry2 e2 ON e.folder = e2.rowid
+                                        WHERE e.folder IN (${folderIds.join(',')}) AND e.is_deleted = 0 AND e.date_added > ?`, [pastDate]);
+        return [rows, this.parentsMap[rowid]];
+        //return groupRowsByName(rows);
     }
-    async getRecentlyAdded(pastDate) {
-        const rows = await this.allAsync(`SELECT rowid, * FROM entry WHERE date_added > ?`, [pastDate]);
-        return groupRowsByName(rows);
+    async getChildren(rowid) { // must be folder
+        return this.getFolderGeneric(rowid, [rowid], '0');
+        //return this.allAsync(`SELECT rowid, * FROM entry2 WHERE folder = ?`, [rowid]);
     }
-    async getFolderStructure() {
-        const rows = await this.allAsync(`SELECT rowid, name, desc, folder FROM entry2 WHERE type = ? AND is_deleted = ?`, ['coll', 0]);
-        const rowid2Row = new Map(), parentsMap = {}, childrenMap = {};
-        rows.forEach(row => {
-            rowid2Row.set(row.rowid, row);
-            childrenMap[row.rowid] = [row.rowid];
-         });
-        rowid2Row.forEach((row, rowid) => {
-            parentsMap[rowid] = [rowid];
-            let parent = row.folder;
-            while (parent != 0) { 
-                parentsMap[rowid].push(parent);
-                childrenMap[parent].push(rowid); 
-                parent = rowid2Row.get(parent).folder; 
-            }
-        });
+    async getAll(rowid) { // must be folder
+        return this.getFolderGeneric(rowid, childrenIdMap[rowid], '0');
     }
+    async getRecentlyAdded(rowid, pastDate) { // must be folder
+        return this.getFolderGeneric(rowid, childrenIdMap[rowid], pastDate);
+        //const inFolders = childrenIdMap[rowid].join(', ');
+        //const rows = await this.allAsync(`SELECT rowid, * FROM entry2 WHERE folder IN (${inFolders}) AND date_added > ?`, [pastDate]);
+        //return [rows, this.parentsMap[rowid]];
+        //return groupRowsByName(rows);
+    }
+    
     async allAsync(sql, params) {
         return new Promise((resolve, reject) => {
             this.db.all(sql, params, (err, rows) => {
@@ -143,4 +192,4 @@ class DbHandler {
     }
 }
 
-module.exports = { DbHandler };
+module.exports = { DbHandler, parseFileName, createFileName };

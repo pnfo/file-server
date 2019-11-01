@@ -47,7 +47,7 @@ async function sendSearchQuery(query) {
     const response = await fetch('../api/search/', {
         method: 'POST', 
         headers: { 'Content-Type': 'text/plain' }, 
-        body: query, //JSON.stringify(words)
+        body: JSON.stringify({query, entryId: $('div.content').attr('entry-id')})
     });
     const resultsHtml = await response.text();
     //console.log(resultsHtml);
