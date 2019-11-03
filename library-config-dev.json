@@ -3,9 +3,9 @@
     
     "httpRoot": "/library",
     "serverPort": 8090,
-    "webUrlRoot": "https://tipitaka.lk/library/",
+    "webUrlRoot": "http://localhost:8090/library/",
 
-    "filesRootFolder": "/datadrive/files/public/library",
+    "filesRootFolder": "D:/ebooks",
     "indexHtmlTemplate": "./library/library-template.html",
     "htmlTitle": "පුස්තකාලය",
     "databaseFilePath": "./library/library.db",

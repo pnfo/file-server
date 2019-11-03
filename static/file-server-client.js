@@ -44,7 +44,8 @@ function scheduleSearchIndex(query) {
 
 async function sendSearchQuery(query) {
     statusDiv.html(`<i class="fad fa-spinner fa-spin"></i> සොයමින්... මදක් ඉවසන්න.`);
-    const response = await fetch('../api/search/', {
+    const apiEndpoint = $('div.content').attr('web-url') + 'api/search/';
+    const response = await fetch(apiEndpoint, {
         method: 'POST', 
         headers: { 'Content-Type': 'text/plain' }, 
         body: JSON.stringify({query, entryId: $('div.content').attr('entry-id')})
@@ -55,18 +56,18 @@ async function sendSearchQuery(query) {
     const numResults = resultsDiv.children('table').attr('size') || 0;
     console.log(`Search query returned ${numResults} results`);
     if (!numResults) {
-        statusDiv.text(`“${query}” යන සෙවුම සඳහා ගැළපෙන පොත් කිසිවක් හමුවුයේ නැත. වෙනත් සෙවුමක් උත්සාහ කර බලන්න.`);
+        statusDiv.text(`“${query}” යන සෙවුම සඳහා ගැළපෙන නම් කිසිවක් හමුවුයේ නැත. වෙනත් සෙවුමක් උත්සාහ කර බලන්න.`);
     } else if (numResults < resultSettings.maxResults) {
-        statusDiv.text(`“${query}” යන සෙවුම සඳහා ගැළපෙන පොත් ${numResults} ක් හමුවුනා.`);
+        statusDiv.text(`“${query}” යන සෙවුම සඳහා ගැළපෙන නම් ${numResults} ක් හමුවුනා.`);
     } else {
-        statusDiv.text(`ඔබගේ සෙවුම සඳහා ගැළපෙන පොත් ${numResults} කට වඩා හමුවුනා. එයින් මුල් පොත් ${resultSettings.maxResults} පහත දැක්වේ.`);
+        statusDiv.text(`ඔබගේ සෙවුම සඳහා ගැළපෙන නම් ${numResults} කට වඩා හමුවුනා. එයින් මුල් ${resultSettings.maxResults} පහත දැක්වේ.`);
     }
 }
 
-/*const clipb = new ClipboardJS('.share-icon', { //.TOC-text .share-icon
+const clipb = new ClipboardJS('.share-icon', {
     text: function(icon) {
-        const bookFolder = $(icon).parents('[book-folder]:first').attr('book-folder');
-        return `https://pitaka.lk/books/${bookFolder}/${$(icon).attr('file-name') || ''}`;
+        const entryId = $(icon).parents('tr[entry-id]').attr('entry-id');
+        return $('div.content').attr('web-url') + entryId;
     }
 });
 clipb.on('success', e => showToast('link එක copy කර ගත්තා. ඔබට අවශ්‍ය තැන paste කරන්න.'));
@@ -76,7 +77,7 @@ function showToast(toastMsg) {
     // After 3 seconds, remove the show class from DIV
     setTimeout(function(){ toast.hide(); }, 3000);
 }
-
+/*
 // old code
 
 

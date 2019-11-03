@@ -76,12 +76,12 @@ async function processFolder(fileName, lstat, parentFolder) {
     let [name, desc, rowid, type] = dh.parseFileName(fileName);
     
     if (rowid) { // update row
-        const curRow = await db.getAsync('SELECT * FROM entry2 WHERE rowid = ?', [rowid]);
+        const curRow = await db.getAsync('SELECT * FROM entry WHERE rowid = ?', [rowid]);
         if (curRow) { 
             // one the four fields name,desc,folders,date_added may or may not have changed.
             // set is_deleted to false too - in case a deleted folder was brought back again
             const params = [name, desc, "coll", parentFolder, 0, rowid]
-            await db.runAsync('UPDATE entry2 SET name = ?, desc = ?, type = ?, folder = ?, is_deleted = ? WHERE rowid = ?', params);
+            await db.runAsync('UPDATE entry SET name = ?, desc = ?, type = ?, folder = ?, is_deleted = ? WHERE rowid = ?', params);
             dbStats.foldersUpdated++;
             return [rowid, dh.createFileName(name, desc, rowid, type)]
         } // if the rowid does not exist we need to add it
@@ -89,7 +89,7 @@ async function processFolder(fileName, lstat, parentFolder) {
 
     // need to create a new row
     const newRow = [name, desc, "coll", parentFolder, getDate(lstat.birthtime)];
-    rowid = await db.runAsync('INSERT INTO entry2(name, desc, type, folder, date_added) VALUES (?,?,?,?,?)', newRow);
+    rowid = await db.runAsync('INSERT INTO entry(name, desc, type, folder, date_added) VALUES (?,?,?,?,?)', newRow);
     dbStats.foldersAdded++;
     
     return [rowid, dh.createFileName(name, desc, rowid, type)];
@@ -101,12 +101,12 @@ async function processFile(fileName, lstat, folder) {
     const size = lstat.size; // in bytes
 
     if (rowid) { // update existing row
-        const curRow = await db.getAsync('SELECT * FROM entry2 WHERE rowid = ?', [rowid]);
+        const curRow = await db.getAsync('SELECT * FROM entry WHERE rowid = ?', [rowid]);
         if (curRow) { 
             // update all except the downloads and date_added - in many cases the update is unnecessary as the fields are not changed
             // but will have to check each field to see if an update is needed - so update all anyway
             const params = [ name, desc, type, folder, size, 0, rowid ];
-            await db.runAsync(`UPDATE entry2 SET name = ?, desc = ?, type = ?, folder = ?, size = ?, is_deleted = ? WHERE rowid = ?`, params);
+            await db.runAsync(`UPDATE entry SET name = ?, desc = ?, type = ?, folder = ?, size = ?, is_deleted = ? WHERE rowid = ?`, params);
             dbStats.filesUpdated++;
             return [rowid, dh.createFileName(name, desc, rowid, type)];
         } // if the rowid does not exist we need add a new row
@@ -128,7 +128,7 @@ async function processFile(fileName, lstat, folder) {
         dbStats.rowsNotFoundInMF++;
     }
 
-    rowid = await db.runAsync('INSERT INTO entry2(name, desc, type, folder, size, date_added, downloads, extra_prop) VALUES (?,?,?,?,?,?,?,?)', newRow);
+    rowid = await db.runAsync('INSERT INTO entry(name, desc, type, folder, size, date_added, downloads, extra_prop) VALUES (?,?,?,?,?,?,?,?)', newRow);
     dbStats.filesAdded++;
 
     return [rowid, dh.createFileName(name, desc, rowid, type)];
@@ -146,12 +146,12 @@ async function addHtmlLinks(dataFolder) {
 }
 
 async function brokenUrlChecker(rootFolder) {
-    const rows = await db.allAsync('SELECT rowid, name, desc, type, folder FROM entry2 WHERE is_deleted = ?', [0]);
+    const rows = await db.allAsync('SELECT rowid, name, desc, type, folder FROM entry WHERE is_deleted = ?', [0]);
     for (let row of rows) {
         const url = path.join(rootFolder, db.getUrl(row));
         if (row.type != 'link' && !fs.existsSync(url)) {
             console.error(`file ${url} does not exist. marking ${row.rowid} as deleted`);
-            await db.runAsync(`UPDATE entry2 SET is_deleted = ? WHERE rowid = ?`, [1]);
+            await db.runAsync(`UPDATE entry SET is_deleted = ? WHERE rowid = ?`, [1]);
             dbStats.markedAsDeleted++;
         }
     }

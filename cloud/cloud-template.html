@@ -8,12 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="icon" type="image/png" sizes="96x96" href="./static/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="{{ webUrl }}static/favicon-96x96.png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!--pro cdn enabled on tipitaka.lk and pitaka.lk-->
     <script src="https://kit.fontawesome.com/09af54cb3e.js" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="./static/file-server.css"/>
+    <link rel="stylesheet" href="{{ webUrl }}static/file-server.css"/>
   </head>
   <body>
     <div class="top-container">
@@ -28,7 +28,8 @@
         </div>
     </div>
     <div id="toast"></div>
-    <script src="./static/jquery-3.3.1.slim.min.js"></script>
-    <script src="./static/file-server-client.js"></script>
+    <script src="{{ webUrl }}static/jquery-3.3.1.slim.min.js"></script>
+    <script src="{{ webUrl }}static/clipboard.min.js"></script>
+    <script src="{{ webUrl }}static/file-server-client.js"></script>
   </body>
 </html>

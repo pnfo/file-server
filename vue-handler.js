@@ -2,18 +2,18 @@ const Vue = require('vue');
 const vsr = require('vue-server-renderer');
 
 const typeToInfo = {
-    'pdf': ['fal fa-file-pdf', 'PDF', 'PDF file එක භාගත කරගන්න', 'application/pdf'],
-    'htm': ['fab fa-chrome', 'WEB', 'HTML file එක වෙත පිවිසෙන්න', 'text/html'],
-    'lin': ['fal fa-link', 'WWW', 'Link එක වෙත පිවිසෙන්න', ''], // redirect to url
-    'col': ['fal fa-folder', 'ගොනුව', 'ගොනුව වෙත පිවිසෙන්න'],
-    'zip': ['fal fa-file-archive', 'ZIP', 'ZIP file එක භාගත කරගන්න', 'application/zip'],
-    'apk': ['fab fa-android', 'APP', 'android මෘදුකාංගය ලබාගන්න', 'application/octet-stream'],
-    'doc': ['fal fa-file-word', 'DOC', 'Word file එක භාගත කරගන්න', 'application/octet-stream'],
-    'xls': ['fal fa-file-excel', 'EXCEL', 'Excel වගුව භාගත කරගන්න', 'application/octet-stream'],
-    'jpg': ['fal fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/jpeg'],
-    'png': ['fal fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/png'],
-    'txt': ['fal fa-file-alt', 'TXT', 'TEXT file එක වෙත පිවිසෙන්න', 'text/plain'],
-    'mp3': ['fal fa-file-alt', 'MP3', 'TEXT file එක වෙත පිවිසෙන්න', 'audio/mpeg'],
+    'pdf': ['fad fa-file-pdf', 'PDF', 'PDF file එක භාගත කරගන්න', 'application/pdf', 'darkred'],
+    'htm': ['fad fa-file-code', 'WEB', 'HTML file එක වෙත පිවිසෙන්න', 'text/html', 'blue'],
+    //'lin': ['fad fa-link', 'WWW', 'Link එක වෙත පිවිසෙන්න', ''], // redirect to url
+    'col': ['fad fa-folder', 'ගොනුව', 'ගොනුව වෙත පිවිසෙන්න', '', 'goldenrod'],
+    'zip': ['fad fa-file-archive', 'ZIP', 'ZIP file එක භාගත කරගන්න', 'application/zip', 'darkslategrey'],
+    'apk': ['fad fa-mobile-android', 'APP', 'android මෘදුකාංගය ලබාගන්න', 'application/octet-stream', 'green'],
+    'doc': ['fad fa-file-word', 'DOC', 'Word file එක භාගත කරගන්න', 'application/octet-stream', 'darkblue'],
+    'xls': ['fad fa-file-excel', 'EXCEL', 'Excel වගුව භාගත කරගන්න', 'application/octet-stream', 'darkgreen'],
+    'jpg': ['fad fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/jpeg', 'purple'],
+    'png': ['fad fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/png', 'purple'],
+    'txt': ['fad fa-file-alt', 'TXT', 'TEXT file එක වෙත පිවිසෙන්න', 'text/plain', 'black'],
+    'mp3': ['fad fa-file-audio', 'MP3', 'TEXT file එක වෙත පිවිසෙන්න', 'audio/mpeg', 'navy'],
 };
 
 function getTypeInfo(type) {
@@ -25,10 +25,10 @@ function readableSize(size) {
     const sizeUnits = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     if (!size) return '';
     const i = parseInt(Math.floor(Math.log(size) / Math.log(1024)));
-    return Math.round(size / Math.pow(1024, i), 2) + '' + sizeUnits[i];
+    return Math.round(size / Math.pow(1024, i), 2) + ' ' + sizeUnits[i];
 }
 function formatNumber(num) {
-    return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+    return num ? num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,') : '';
 }
 
 const componentList = {
@@ -39,16 +39,24 @@ const componentList = {
             //typeStr: function() { return getTypeInfo(this.entry.type)[1]; },
             sizeStr: function() { return readableSize(this.entry.size); },
             iconStr: function() { return getTypeInfo(this.entry.type)[0]; },
+            iconStyle: function() { return 'color:' + getTypeInfo(this.entry.type)[4]; },
             tipText: function() { return getTypeInfo(this.entry.type)[2]; },
+            details: function() {
+                if (this.entry.type != 'coll') return this.entry.desc;
+                return `files ගණන: ${this.entry.num_entries}, මුළු ප්‍රමාණය: ${readableSize(this.entry.total_size)}`; 
+            },
+            name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`;},
         },
         // folder_name need to be added to the entry/row
-        template: `<tr class="entry">
+        template: `<tr class="entry" :entry-id="entry.rowid">
             <td class="name">
-                <a class="button entry" :entry-id="entry.rowid" :tip="tipText" :href="entry.rowid">
-                    <i v-bind:class="iconStr"></i>
-                    <span class="entry-details">{{ entry.name }}</span>
+                <a :class="'entry-name ' + entry.type" :tip="tipText" :href="webUrl + entry.rowid">
+                    <i v-bind:class="iconStr" :style="iconStyle"></i>
+                    <span>{{ name }}</span>
                 </a>
+                <span class="entry-details">{{ details }}</span>
             </td>
+            <td><i class="fad fa-share-alt share-icon"></i></td>
             <td v-show="columns.includes('folder')" class="folder">{{ entry.folder_name }}</td>
             <td v-show="columns.includes('downloads')" class="downloads">{{ downloads }}</td>
             <td v-show="columns.includes('date_added')" class="date-added">{{ entry.date_added }}</td>
@@ -59,12 +67,12 @@ const componentList = {
         props: ['entries', 'columns'],
         template: `<table class="entry-list" :size="entries.length">
             <thead><tr>
-                <td class="name"><i class="fas fa-book"></i> පොතේ නම</td>
-                <td v-show="columns.includes('folder')" class="folder"><i class="fas fa-folder"></i> ගොනුව</td>
-                <td v-show="columns.includes('downloads')" class="downloads"><i class="fas fa-tally"></i> භාගත ගණන</td>
-                <td v-show="columns.includes('date_added')" class="date-added"><i class="fas fa-calendar"></i> එකතුකළ දිනය</td>
-                <td v-show="columns.includes('size')" class="size"><i class="fas fa-size"></i> ප්‍රමාණය</td>
-                <td class="share"><i class="fas fa-share"></i> </td>
+                <td class="name"><i class="fad fa-book"></i> නම</td>
+                <td class="share"></td>
+                <td v-show="columns.includes('folder')" class="folder"><i class="fad fa-folder"></i> ගොනුව</td>
+                <td v-show="columns.includes('downloads')" class="downloads"><i class="fad fa-tally"></i> භාගත ගණන</td>
+                <td v-show="columns.includes('date_added')" class="date-added"><i class="fad fa-calendar"></i> එකතුකළ දිනය</td>
+                <td v-show="columns.includes('size')" class="size"><i class="fad fa-database"></i> ප්‍රමාණය</td>
             </tr></thead>
             <tbody>
                 <entry
@@ -76,36 +84,42 @@ const componentList = {
         </table>`,
     },
     'top-nav': {
-        props: ['parents'],
-        template: `<nav class="top">
-            <a class="button" href="./0/">
-                <i class="fas fa-home" style="color: cadetblue;"></i><span>බෞද්ධ පුස්තකාලය</span>
-            </a>
-            <a class="button" v-for="folder in parents" v-bind:href="'./' + folder.rowid">
-                <i class="fas fa-folder"></i><span>{{ folder.name }}</span>
-            </a>
-            
+        props: ['parents', 'entryId'],
+        template: `<div>
+            <nav class="top">
+                <div class="nav-link">
+                    <a :href="webUrl + '0'"><i class="fad fa-home" style="color: cadetblue;"></i><span>පුස්තකාලය</span></a>
+                    <i class="fad fa-caret-right" style="color: gray; font-size: 1rem;"></i>
+                </div>
+                <div v-for="folder in parents" class="nav-link">
+                    <a v-bind:href="webUrl + folder.rowid">
+                        <i class="fad fa-folder" style="color:goldenrod;"></i><span>{{ folder.name }}</span>
+                    </a>
+                    <i class="fad fa-caret-right" style="color: gray; font-size: 1rem;"></i>
+                </div>
+            </nav>
+
             <div id="search-content">
                 <div id="search-bar-div">
                     <i class="fad fa-search" style="padding-right: 0.5rem;"></i>
-                    <input class="search-bar" type="text" placeholder="පොත් සොයන්න">
-                    <a class="button" href="./all/">
-                        <i class="fas fa-books" style="color: green;"></i><span>සියලු පොත්</span>
+                    <input class="search-bar" type="text" :placeholder="fileTypeName + ' සොයන්න'">
+                    <a class="button" :href="webUrl +  entryId + '/all'">
+                        <i class="fas fa-books" style="color: green;"></i><span>{{ 'සියලු ' + fileTypeName }}</span>
                     </a>
-                    <a class="button" href="./newly-added/90">
-                        <i class="fas fa-fire" style="color: orange;"></i><span>අලුතින් එක් කළ පොත්</span>
+                    <a class="button" :href="webUrl + entryId + '/newly-added/90'">
+                        <i class="fas fa-fire" style="color: orange;"></i><span>අලුතින් එක් කළ</span>
                     </a>
                 </div>
-                <div id="search-status">පොත් සෙවීම සඳහා ඉහත කොටුවේ type කරන්න.</div>
+                <div id="search-status">{{ fileTypeName + ' සෙවීම සඳහා ඉහත කොටුවේ type කරන්න.' }}</div>
                 <div id="search-results"></div>
             </div>
-        </nav>`
+        </div>`
     },
 }
 
-function vueEntryList(entries) {
+function vueSearchResult(data) {
     return new Vue({
-        data: { entries },
+        data: data,
         template: `<entry-list v-if="entries.length" v-bind:entries="entries" :columns="columns"></entry-list>`,
     });
 }
@@ -113,24 +127,28 @@ function vueEntryList(entries) {
 function vueFullPage(data) {
     return new Vue({
         data: data,
-        template: `<div class="content" :entry-id="entryId">
-            <top-nav :parents="parents"></top-nav>
+        template: `<div class="content" :entry-id="entryId" :web-url="webUrl">
+            <top-nav :parents="parents" :entry-id="entryId"></top-nav>
             <entry-list v-if="entries.length" v-bind:entries="entries" :columns="columns"></entry-list>
             <div class="empty-placeholder" v-if="!entries.length">මෙම ගොනුව හිස්ය.</div>
         </div>`,
     });
 }
 
-let vueRenderer;
-function setupVueSSR(htmlTemplateFile) {
+//let webUrl;
+function setupVueSSR(config) {
+    //webUrl = webUrlRoot;
     Vue.component('entry', componentList['entry']);
     Vue.component('entry-list', componentList['entry-list']);
     Vue.component('top-nav', componentList['top-nav']);
+    Vue.mixin({ // pass in some global variables
+        data: () => { return { webUrl: config.webUrlRoot, fileTypeName: config.fileTypeName }; },
+    });
     const pageRR = vsr.createRenderer({
-        template: require('fs').readFileSync(htmlTemplateFile, 'utf-8'),
+        template: require('fs').readFileSync(config.indexHtmlTemplate, 'utf-8'),
     });
     const searchRR = vsr.createRenderer();
     return [pageRR, searchRR];
 }
 
-module.exports = { vueEntryList, vueFullPage, getTypeInfo, setupVueSSR };
+module.exports = { vueSearchResult, vueFullPage, getTypeInfo, setupVueSSR };

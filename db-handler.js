@@ -1,6 +1,6 @@
 /**
  * Db table format as follows
- * CREATE TABLE `entry2` (
+ * CREATE TABLE `entry` (
 	`name`	TEXT NOT NULL,
 	`desc`	TEXT NOT NULL,
 	`type`	TEXT NOT NULL,
@@ -35,21 +35,6 @@ function createFileName(name, desc, rowid, type) {
     return `${name}${desc}${rowid}${type}`;
 }
 
-function groupRowsByName(rows) {
-    const rowGs = {};
-    rows.forEach(row => {
-        let rowG = rowGs[row.name];
-        if (!rowG) {
-            rowG = { name: row.name, downloads: row.downloads, folders: row.folders, entries: [row] };
-            // TODO, entries could be in different folders - yet the first one is used
-            rowGs[row.name] = rowG;
-        } else {
-            rowG.entries.push(row);
-            rowG.downloads += row.downloads;
-        }
-    });
-    return Object.values(rowGs);
-}
 // for testing - use like await sleep(10000);
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -63,14 +48,18 @@ class DbHandler {
         });
     }
     async initFolderStructure() {
-        const rowid2Row = {};
+        this.rowid2Row = {};
         this.parentsMap = {};
         this.childrenIdMap = {};
         this.folderPaths = {};
 
-        const rows = await this.allAsync(`SELECT rowid, name, desc, type, folder FROM entry2 WHERE type = ? AND is_deleted = ?`, ['coll', 0]);
+        //const rows = await this.allAsync(`SELECT rowid, name, desc, type, folder FROM entry WHERE type = ? AND is_deleted = ?`, ['coll', 0]);
+        const rows = await this.allAsync(`SELECT e.rowid, e.name, e.desc, e.type, e.folder, 
+                                        COUNT(e.rowid) AS num_entries, SUM(e2.size) AS total_size FROM entry e
+                                        INNER JOIN entry e2 ON e2.folder = e.rowid
+                                        WHERE e.type = ? AND e.is_deleted = ? GROUP BY e2.folder`, ['coll', 0]);
         rows.forEach(row => {
-            rowid2Row[row.rowid] = row;
+            this.rowid2Row[row.rowid] = row;
             this.childrenIdMap[row.rowid] = [row.rowid];
          });
         rows.forEach(row => {
@@ -78,7 +67,7 @@ class DbHandler {
             this.parentsMap[child] = [row];
             while (row.folder != 0) { 
                 this.childrenIdMap[row.folder].push(row.rowid);
-                row = rowid2Row[row.folder];
+                row = this.rowid2Row[row.folder];
                 this.parentsMap[child].push(row);
             }
         });
@@ -91,58 +80,57 @@ class DbHandler {
         return path.join(this.folderPaths[row.folder] || '', createFileName(row.name, row.desc, row.rowid, row.type));
     }
 
-    async search(terms) { // folders are not searched
+    async search(rowid, terms) { // folders are not searched
         // sqlite will error if number of experessions is more than 1000, so do in batches
         const batchSize = 800, finalRows = []; 
         for (let i = 0; i < terms.length; i += batchSize) {
-            const whereClouse = terms.slice(i, i + batchSize).map(term => `name LIKE '%${term}%'`).join(' OR ');
-            const rows = await this.allAsync(`SELECT rowid, * FROM entry WHERE ${whereClouse}`, []);
+            const whereClouse = terms.slice(i, i + batchSize).map(term => `e.name LIKE '%${term}%'`).join(' OR ');
+            const [rows, _1] = await this.getFolderGeneric(rowid, this.childrenIdMap[rowid], '0', ` AND (${whereClouse})`);
+            //const rows = await this.allAsync(`SELECT rowid, * FROM entry WHERE ${whereClouse}`, []);
             finalRows.push(...rows);
         }
-        return groupRowsByName(finalRows);
-    }
-    async getFolder(folders) { // a chain of folders
-        // get folders
-        const likeTerm = JSON.stringify(folders).slice(0, -1) + '%"]'; // remove last char and add %"]
-        //console.log(likeTerm);
-        let folderRows = await this.allAsync(`SELECT folders, COUNT(*) AS num_files, SUM(size) as size FROM entry WHERE folders LIKE ? GROUP BY folders`, [likeTerm]);
-        folderRows = folderRows.filter(gRow => JSON.parse(gRow.folders).length == folders.length + 1);
-        folderRows.forEach(gRow => gRow.name = JSON.parse(gRow.folders).slice(-1)[0]);
-        // get entries
-        const rows = await this.allAsync(`SELECT rowid, * FROM entry WHERE folders = ?`, [JSON.stringify(folders)]);
-        return [ groupRowsByName(rows), folderRows ];
+        return finalRows;
     }
 
     async incrementDownloads(rowid) { // must be a file
-        return this.runAsync(`UPDATE entry2 SET downloads = downloads + 1 WHERE rowid = ?`, [rowid]);
+        return this.runAsync(`UPDATE entry SET downloads = downloads + 1 WHERE rowid = ?`, [rowid]);
     }
 
     async getEntry(rowid) {
-        return this.getAsync(`SELECT rowid, * FROM entry2 WHERE rowid = ?`, [rowid]);
+        return this.getAsync(`SELECT rowid, * FROM entry WHERE rowid = ?`, [rowid]);
         // in case of coll, parents contains itself
         //return [entry, this.parentsMap[entry.type == 'coll' ? entry.rowid : entry.folder]];
     }
 
-    async getFolderGeneric(rowid, folderIds, pastDate = '0') { // must be folder
-        const rows = await this.allAsync(`SELECT e.rowid, e.*, e2.name AS folder_name FROM entry2 e 
-                                        INNER JOIN entry2 e2 ON e.folder = e2.rowid
-                                        WHERE e.folder IN (${folderIds.join(',')}) AND e.is_deleted = 0 AND e.date_added > ?`, [pastDate]);
+    async getFolderGeneric(rowid, folderIds, pastDate, extraWhere) { // must be folder
+        // in case of rowid = 0 (root folder), folderIds will be undefined and all rows need to be considered
+        const folderFilter = folderIds ? `e.folder IN (${folderIds.join(',')}) AND ` : '';
+        // LEFT JOIN needed when querying the rootfolder, e.folder will be 0
+        const rows = await this.allAsync(`SELECT e.rowid, e.*, e2.name AS folder_name FROM entry e 
+                                        LEFT JOIN entry e2 ON e.folder = e2.rowid
+                                        WHERE ${folderFilter} e.is_deleted = 0 AND e.date_added > ?${extraWhere}`, [pastDate]);
+        // for the folder entries add extra fields (num files and total size of those files)
+        rows.filter(row => row.type == 'coll').forEach(row => {
+            row.num_entries = this.rowid2Row[row.rowid].num_entries;
+            row.total_size = this.rowid2Row[row.rowid].total_size;
+        });
+        rows.sort((a, b) => { // folers come first, then sort by name
+            if (a.type == b.type || (a.type != 'coll' && b.type != 'coll')) {
+                if (a.name == b.name) return 0;
+                return (b.name < a.name) - (b.name > a.name);
+            }
+            return (b.type == 'coll') - (a.type == 'coll');
+        });
         return [rows, this.parentsMap[rowid]];
-        //return groupRowsByName(rows);
     }
     async getChildren(rowid) { // must be folder
-        return this.getFolderGeneric(rowid, [rowid], '0');
-        //return this.allAsync(`SELECT rowid, * FROM entry2 WHERE folder = ?`, [rowid]);
+        return this.getFolderGeneric(rowid, [rowid], '0', '');
     }
     async getAll(rowid) { // must be folder
-        return this.getFolderGeneric(rowid, childrenIdMap[rowid], '0');
+        return this.getFolderGeneric(rowid, this.childrenIdMap[rowid], '0', '');
     }
     async getRecentlyAdded(rowid, pastDate) { // must be folder
-        return this.getFolderGeneric(rowid, childrenIdMap[rowid], pastDate);
-        //const inFolders = childrenIdMap[rowid].join(', ');
-        //const rows = await this.allAsync(`SELECT rowid, * FROM entry2 WHERE folder IN (${inFolders}) AND date_added > ?`, [pastDate]);
-        //return [rows, this.parentsMap[rowid]];
-        //return groupRowsByName(rows);
+        return this.getFolderGeneric(rowid, this.childrenIdMap[rowid], pastDate, '');
     }
     
     async allAsync(sql, params) {

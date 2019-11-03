@@ -37,12 +37,15 @@ const config = JSON.parse(fs.readFileSync(cmdArgs[0], {encoding: 'utf-8'}));
 console.log(`config file ${JSON.stringify(config)}`);
 
 const vh = require('./vue-handler');
-const [pageRR, searchRR] = vh.setupVueSSR(config.indexHtmlTemplate);
+const [pageRR, searchRR] = vh.setupVueSSR(config);
 
 const dh = require('./db-handler');
 const db = new dh.DbHandler(config.databaseFilePath);
 
-const getContext = (parents, extra) => { return { title: extra + (parents.slice(-1).name || config.htmlTitle) }; };
+const getContext = (parents, extra) => { return { 
+    title: extra + (parents ? parents.slice(-1)[0].name : config.htmlTitle), 
+    webUrl: config.webUrlRoot,
+}; };
 
 // return all books page
 server.get(`${config.httpRoot}/:entryId/all`, async function(req, res, next) {
@@ -79,19 +82,20 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res, next) {
     try {
         const entryId = parseInt(req.params.entryId);
         const entry = await db.getEntry(entryId);
-        console.log(`view entry page ${entryId} : ${entry.name}.${entry.type}`);
-        if (entry.type == 'coll') {
+        if (entryId == 0 || entry.type == 'coll') { // root folder or sub folder
+            console.log(`view folder page ${entryId} : ${entryId ? entry.name : 'root folder'}`);
             const [entries, parents] = await db.getChildren(entryId);
             const data = { entries, parents, entryId, columns: ['size', 'downloads'] };
             const html = await pageRR.renderToString(vh.vueFullPage(data), getContext(parents, ''));
             sendHtml(res, html);
         } else {
+            console.log(`download file ${entryId} : ${entry.name}.${entry.type}`);
             db.incrementDownloads(entryId); // increment download count
 
-            const contentDisposition = row.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
-            const fileName = encodeURI(row.url.split('/').pop());
+            const contentDisposition = entry.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
+            const fileName = encodeURI(dh.createFileName(entry.name, entry.desc, '', entry.type));
             res.writeHead(200, {
-                "Content-Type": `${vh.getTypeInfo(row.type)[3]}; charset=utf-8`,
+                "Content-Type": `${vh.getTypeInfo(entry.type)[3]}; charset=utf-8`,
                 "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${fileName}`,
             });
             const filePath = path.join(config.filesRootFolder, db.getUrl(entry));
@@ -104,7 +108,7 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res, next) {
     }
 });
 
-server.get(`${config.httpRoot}/download/:entryId`, function (req, res, next) {
+/*server.get(`${config.httpRoot}/download/:entryId`, function (req, res, next) {
     const entryId = req.params.entryId;
     db.getEntryFromId(entryId).then(row => {
         if (!row.name) {
@@ -136,7 +140,7 @@ server.get(`${config.httpRoot}/download/:entryId`, function (req, res, next) {
     }).catch(err => {
         sendError(res, err);
     });
-});
+});*/
 
 // search index and return rendered html
 server.post(`${config.httpRoot}/api/search/`, async function(req, res, next) {
@@ -146,7 +150,8 @@ server.post(`${config.httpRoot}/api/search/`, async function(req, res, next) {
         const queryTerms = singlish.getTerms(body.query);
         const entries = await db.search(body.entryId, queryTerms);
         console.log(`for query ${body.query} num. of terms ${queryTerms.length}, files found ${entries.length}`);
-        const html = await searchRR.renderToString(vh.vueBookList(books));
+        const data = { entries, columns: ['size', 'folder'] };
+        const html = await searchRR.renderToString(vh.vueSearchResult(data));
         sendHtml(res, html);
     } catch(err) {
         sendError(res, err);
