@@ -1,13 +1,13 @@
 {
-    "fileTypeName": "පොත්",
-    
+    "fileTypeName": "දේශනා",
+    "rootFolderName": "දහම් ගබඩාව",
+
     "httpRoot": "/cloud",
     "serverPort": 8091,
     "webUrlRoot": "http://localhost:8091/cloud/",
 
     "filesRootFolder": "E:/Bhikkus/Pitigala Gunarathna",
     "indexHtmlTemplate": "./cloud/cloud-template.html",
-    "htmlTitle": "cloud",
     "databaseFilePath": "./cloud/cloud.db",
     "mediafireDataFile": "./cloud/mediafire-gunarathana.json"
 }

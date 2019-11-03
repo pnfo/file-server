@@ -1,13 +1,13 @@
 {
     "fileTypeName": "පොත්",
-    
+    "rootFolderName": "පුස්තකාලය",
+
     "httpRoot": "/library",
     "serverPort": 8090,
     "webUrlRoot": "http://localhost:8090/library/",
 
     "filesRootFolder": "D:/ebooks",
     "indexHtmlTemplate": "./library/library-template.html",
-    "htmlTitle": "පුස්තකාලය",
-    "databaseFilePath": "./library/library.db",
+    "databaseFilePath": "./library/library-dev.db",
     "mediafireDataFile": "./library/mediafire-stats.json"
 }

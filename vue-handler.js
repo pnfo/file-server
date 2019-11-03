@@ -13,13 +13,14 @@ const typeToInfo = {
     'jpg': ['fad fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/jpeg', 'purple'],
     'png': ['fad fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/png', 'purple'],
     'txt': ['fad fa-file-alt', 'TXT', 'TEXT file එක වෙත පිවිසෙන්න', 'text/plain', 'black'],
-    'mp3': ['fad fa-file-audio', 'MP3', 'TEXT file එක වෙත පිවිසෙන්න', 'audio/mpeg', 'navy'],
+    'mp3': ['fad fa-file-audio', 'MP3', 'ධර්ම දේශනාව භාගත කරගන්න', 'audio/mpeg', 'navy'],
+    'unk': ['fad fa-file-alt', 'FILE', 'භාගත කරගන්න', 'application/octet-stream', 'darkgreen'], // unknown types
 };
 
 function getTypeInfo(type) {
     let type3 = type.substr(0, 3);
     if (type3 == 'jpeg') type3 = 'jpg';
-    return typeToInfo[type3];
+    return typeToInfo[type3] || typeToInfo['unk'];
 }
 function readableSize(size) {
     const sizeUnits = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
@@ -43,7 +44,7 @@ const componentList = {
             tipText: function() { return getTypeInfo(this.entry.type)[2]; },
             details: function() {
                 if (this.entry.type != 'coll') return this.entry.desc;
-                return `files ගණන: ${this.entry.num_entries}, මුළු ප්‍රමාණය: ${readableSize(this.entry.total_size)}`; 
+                return `Files: ${this.entry.num_entries}, Size: ${readableSize(this.entry.total_size)}`; 
             },
             name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`;},
         },
@@ -53,13 +54,13 @@ const componentList = {
                 <a :class="'entry-name ' + entry.type" :tip="tipText" :href="webUrl + entry.rowid">
                     <i v-bind:class="iconStr" :style="iconStyle"></i>
                     <span>{{ name }}</span>
+                    <span class="entry-details">{{ details }}</span>
                 </a>
-                <span class="entry-details">{{ details }}</span>
             </td>
             <td><i class="fad fa-share-alt share-icon"></i></td>
             <td v-show="columns.includes('folder')" class="folder">{{ entry.folder_name }}</td>
             <td v-show="columns.includes('downloads')" class="downloads">{{ downloads }}</td>
-            <td v-show="columns.includes('date_added')" class="date-added">{{ entry.date_added }}</td>
+            <td v-show="columns.includes('date_added')" class="date_added">{{ entry.date_added }}</td>
             <td v-show="columns.includes('size')" class="size">{{ sizeStr }}</td>
         </tr>`,
     },
@@ -70,9 +71,9 @@ const componentList = {
                 <td class="name"><i class="fad fa-book"></i> නම</td>
                 <td class="share"></td>
                 <td v-show="columns.includes('folder')" class="folder"><i class="fad fa-folder"></i> ගොනුව</td>
-                <td v-show="columns.includes('downloads')" class="downloads"><i class="fad fa-tally"></i> භාගත ගණන</td>
-                <td v-show="columns.includes('date_added')" class="date-added"><i class="fad fa-calendar"></i> එකතුකළ දිනය</td>
-                <td v-show="columns.includes('size')" class="size"><i class="fad fa-database"></i> ප්‍රමාණය</td>
+                <td v-show="columns.includes('downloads')" class="downloads"><i class="fad fa-tally"></i><span class="ss-hide"> භාගත ගණන</span></td>
+                <td v-show="columns.includes('date_added')" class="date_added"><i class="fad fa-calendar"></i><span class="ss-hide"> එකතුකළ දිනය</span></td>
+                <td v-show="columns.includes('size')" class="size"><i class="fad fa-database"></i><span class="ss-hide"> ප්‍රමාණය</span></td>
             </tr></thead>
             <tbody>
                 <entry
@@ -88,7 +89,7 @@ const componentList = {
         template: `<div>
             <nav class="top">
                 <div class="nav-link">
-                    <a :href="webUrl + '0'"><i class="fad fa-home" style="color: cadetblue;"></i><span>පුස්තකාලය</span></a>
+                    <a :href="webUrl + '0'"><i class="fad fa-home" style="color: cadetblue;"></i><span>{{ rootFolderName }}</span></a>
                     <i class="fad fa-caret-right" style="color: gray; font-size: 1rem;"></i>
                 </div>
                 <div v-for="folder in parents" class="nav-link">
@@ -101,13 +102,13 @@ const componentList = {
 
             <div id="search-content">
                 <div id="search-bar-div">
-                    <i class="fad fa-search" style="padding-right: 0.5rem;"></i>
+                    <i class="fad fa-search" style="padding: 0rem 0.3rem;"></i>
                     <input class="search-bar" type="text" :placeholder="fileTypeName + ' සොයන්න'">
                     <a class="button" :href="webUrl +  entryId + '/all'">
-                        <i class="fas fa-books" style="color: green;"></i><span>{{ 'සියලු ' + fileTypeName }}</span>
+                        <i class="fas fa-books" style="color: green;"></i><span>සියලු</span><span class="ss-hide">{{ ' ' + fileTypeName }}</span>
                     </a>
                     <a class="button" :href="webUrl + entryId + '/newly-added/90'">
-                        <i class="fas fa-fire" style="color: orange;"></i><span>අලුතින් එක් කළ</span>
+                        <i class="fas fa-fire" style="color: orange;"></i><span>අලුත්</span><span class="ss-hide">{{ ' ' + fileTypeName }}</span>
                     </a>
                 </div>
                 <div id="search-status">{{ fileTypeName + ' සෙවීම සඳහා ඉහත කොටුවේ type කරන්න.' }}</div>
@@ -142,7 +143,11 @@ function setupVueSSR(config) {
     Vue.component('entry-list', componentList['entry-list']);
     Vue.component('top-nav', componentList['top-nav']);
     Vue.mixin({ // pass in some global variables
-        data: () => { return { webUrl: config.webUrlRoot, fileTypeName: config.fileTypeName }; },
+        data: () => { return { 
+            webUrl: config.webUrlRoot, 
+            fileTypeName: config.fileTypeName,
+            rootFolderName: config.rootFolderName,
+        }; },
     });
     const pageRR = vsr.createRenderer({
         template: require('fs').readFileSync(config.indexHtmlTemplate, 'utf-8'),

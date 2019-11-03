@@ -15,7 +15,8 @@ body {
     margin: 0px;
 }
 @media screen and (max-width: 500pt) {
-    td.folders { display: none;  } /* hide the folders column on small screens */
+    .ss-hide { display: none;  } 
+    td.folder,td.downloads,td.date_added { display: none; } /* hide the folders column on small screens */
 }
 div.top-container { width: 100%; max-width: 800pt; margin: 0pt auto; height: 100%; display: flex; flex-flow: column; align-content: center;}
 
@@ -27,6 +28,7 @@ tbody tr:hover { background-color: antiquewhite; }
 td { padding: 0.1rem 0.3rem 0.1rem 0.3rem; word-break: break-word; }
 tbody td.folders { color: rgb(151, 151, 151); }
 td.downloads,td.size { text-align: right; }
+td.size { word-break: normal;}
 
 
 nav.top { font-size: 1.2rem; text-align: center; display: flex; align-items: center;  flex-wrap: wrap; margin: 0.2rem; background-color: whitesmoke; }
@@ -38,8 +40,7 @@ nav.top { font-size: 1.2rem; text-align: center; display: flex; align-items: cen
 
 a.entry-name {
     margin: 0.2rem 0.1rem;
-    text-align:center;
-    padding: 0.2rem 0.15rem;
+    padding: 0.2rem 0.1rem;
     text-decoration: none;
     color: darkblue;
     line-height: 1;
@@ -50,8 +51,7 @@ a.entry-name {
 }
 a.entry-name:hover { color: blue; }
 a.entry-name i { padding: 0 0.6rem 0 0.2rem; font-size: 1.5rem; }
-a.entry-name.coll i { color: goldenrod; }
-td.name .entry-details { font-size: 0.7rem; color: gray; }
+td.name .entry-details { font-size: 0.7rem; color: gray; padding-left: 0.4rem;}
 
 a.button { text-decoration: none; margin: 0.2rem 0.2rem; padding: 0.2rem 0.2rem; border: 1px solid black; border-radius: 5px; background-color: #c2eab140;}
 a.button:hover { background-color: white; }

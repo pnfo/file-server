@@ -16,17 +16,16 @@ const dh = require('./db-handler');
 
 const getMFMapKey = (name, desc, type) => `${name}@${desc}@${type}`;
 const getDate = (date) => date.toISOString().split('T')[0];
-let rewriteNameFiles = {}; // reloaded inside the buildIndex()
 let db;
 
 let mfBooksList = {}, copyMediafireStats = false;
-function extractMediafireStats(dataFolder) {
+function extractMediafireStats(mediafireDataFile) {
     mfBooksList = {};
-    JSON.parse(fs.readFileSync(`${dataFolder}/mediafire-stats.json`, {encoding: 'utf-8'})).forEach(mfBook => {
+    JSON.parse(fs.readFileSync(mediafireDataFile, {encoding: 'utf-8'})).forEach(mfBook => {
         mfBook.files.forEach(mfFile => {
             if (mfFile.type == "collection") return;  // discard collections/folders
             const mapKey = getMFMapKey(mfBook.name, mfFile.desc || '', mfFile.type);
-            assert(!mfBooksList[mapKey], `${mapKey} already exists in the mfBookList`);
+            //assert(!mfBooksList[mapKey], `${mapKey} already exists in the mfBookList`);
             mfBooksList[mapKey] = {
                 'date_added': mfFile.time,
                 'downloads': mfFile.downloads,
@@ -134,24 +133,13 @@ async function processFile(fileName, lstat, folder) {
     return [rowid, dh.createFileName(name, desc, rowid, type)];
 }
 
-// REPLACE = (insert or update) entries for the html links
-async function addHtmlLinks(dataFolder) {
-    const newLinksToAdd = JSON.parse(fs.readFileSync(`${dataFolder}/add-new-links.json`, {encoding: 'utf-8'}));
-    for (const linkInfo of newLinksToAdd) {
-        const params = [linkInfo[0], '', 'link', linkInfo[1], 0, JSON.stringify([linkInfo[2]])];
-        // keep existing downloads count and date_added (default 0 and now respectively)
-        await db.runAsync('REPLACE INTO entry (name, desc, type, url, size, folders) VALUES (?,?,?,?,?,?)', params);
-        dbStats.linksReplaced++;
-    }
-}
-
 async function brokenUrlChecker(rootFolder) {
     const rows = await db.allAsync('SELECT rowid, name, desc, type, folder FROM entry WHERE is_deleted = ?', [0]);
     for (let row of rows) {
         const url = path.join(rootFolder, db.getUrl(row));
         if (row.type != 'link' && !fs.existsSync(url)) {
             console.error(`file ${url} does not exist. marking ${row.rowid} as deleted`);
-            await db.runAsync(`UPDATE entry SET is_deleted = ? WHERE rowid = ?`, [1]);
+            await db.runAsync(`UPDATE entry SET is_deleted = ? WHERE rowid = ?`, [1, row.rowid]);
             dbStats.markedAsDeleted++;
         }
     }
@@ -165,7 +153,6 @@ async function brokenUrlChecker(rootFolder) {
 async function rebuildIndex(dbHandler, config) {
     db = dbHandler;
     if (copyMediafireStats) extractMediafireStats(config.mediafireDataFile);
-    //rewriteNameFiles = JSON.parse(fs.readFileSync(`${dataFolder}/rewrite-names.json`, {encoding: 'utf-8'}));
     dbStats = {entriesProcessed: 0, filesAdded: 0, filesUpdated: 0, foldersAdded: 0, foldersUpdated: 0, markedAsDeleted: 0,
          rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
     await processFilesInFolder(config.filesRootFolder, 0);
@@ -186,3 +173,16 @@ async function runRebuildIndex() {
     db.close();
 }
 //runRebuildIndex();
+
+/*
+// REPLACE = (insert or update) entries for the html links
+async function addHtmlLinks(dataFolder) {
+    const newLinksToAdd = JSON.parse(fs.readFileSync(`${dataFolder}/add-new-links.json`, {encoding: 'utf-8'}));
+    for (const linkInfo of newLinksToAdd) {
+        const params = [linkInfo[0], '', 'link', linkInfo[1], 0, JSON.stringify([linkInfo[2]])];
+        // keep existing downloads count and date_added (default 0 and now respectively)
+        await db.runAsync('REPLACE INTO entry (name, desc, type, url, size, folders) VALUES (?,?,?,?,?,?)', params);
+        dbStats.linksReplaced++;
+    }
+}
+*/

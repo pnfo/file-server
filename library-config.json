@@ -1,13 +1,13 @@
 {
     "fileTypeName": "පොත්",
-    
+    "rootFolderName": "පුස්තකාලය",
+
     "httpRoot": "/library",
     "serverPort": 8090,
     "webUrlRoot": "https://tipitaka.lk/library/",
 
     "filesRootFolder": "/datadrive/public/library",
     "indexHtmlTemplate": "./library/library-template.html",
-    "htmlTitle": "පුස්තකාලය",
     "databaseFilePath": "./library/library.db",
     "mediafireDataFile": "./library/mediafire-stats.json"
 }

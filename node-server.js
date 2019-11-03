@@ -43,7 +43,7 @@ const dh = require('./db-handler');
 const db = new dh.DbHandler(config.databaseFilePath);
 
 const getContext = (parents, extra) => { return { 
-    title: extra + (parents ? parents.slice(-1)[0].name : config.htmlTitle), 
+    title: extra + (parents ? parents.slice(-1)[0].name : config.rootFolderName), 
     webUrl: config.webUrlRoot,
 }; };
 
@@ -126,7 +126,7 @@ server.post(`${config.httpRoot}/api/search/`, async function(req, res, next) {
 
 // rebuild index
 server.get(`${config.httpRoot}/api/rebuild-index`, function(req, res, next) {
-    bi.rebuildIndex(db, config.filesRootFolder, config.rebuildDataFolder).then(dbStats => {
+    bi.rebuildIndex(db, config).then(dbStats => {
         console.log(`rebuild index final stats ${JSON.stringify(dbStats)}`);
         res.send(200, dbStats);
     }).catch(err => {
