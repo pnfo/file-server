@@ -186,24 +186,3 @@ async function runRebuildIndex() {
     db.close();
 }
 //runRebuildIndex();
-
-
-
-/** obselete code
-
-const book_to_html = JSON.parse(fs.readFileSync('./data/book-to-html.json', {encoding: 'utf-8'}));
-const rewriteNameFiles = {}, newLinksToAdd = [];
-Object.keys(book_to_html).forEach(bookName => {
-    const url = book_to_html[bookName].url;
-    const fileName = url.split('/').slice(-1)[0];
-    if (fileName.endsWith('.htm')) {
-        rewriteNameFiles[fileName] = bookName;
-    } else if (url.endsWith('/')) {
-        newLinksToAdd.push([bookName, url]);
-    } else {
-        console.log(`unknown type of url found ${url}`);
-    }
-});
-fs.writeFileSync('./data/rewrite-names.json', vkb.json(JSON.stringify(rewriteNameFiles)), {encoding: 'utf-8'});
-fs.writeFileSync('./data/add-new-links.json', vkb.json(JSON.stringify(newLinksToAdd)), {encoding: 'utf-8'});
- */
