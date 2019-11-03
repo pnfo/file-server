@@ -4,10 +4,10 @@
 
     "httpRoot": "/cloud",
     "serverPort": 8091,
-    "webUrlRoot": "https://tipitaka.lk/cloud/",
+    "webUrlRoot": "http://localhost:8091/cloud/",
 
-    "filesRootFolder": "/datadrive/public/cloud",
+    "filesRootFolder": "E:/Bhikkus/Pitigala Gunarathna",
     "indexHtmlTemplate": "./cloud/cloud-template.html",
-    "databaseFilePath": "./cloud/cloud.db",
+    "databaseFilePath": "./cloud/cloud-dev.db",
     "mediafireDataFile": "./cloud/mediafire-gunarathana.json"
 }
