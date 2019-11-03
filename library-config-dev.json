@@ -9,5 +9,5 @@
     "indexHtmlTemplate": "./library/library-template.html",
     "htmlTitle": "පුස්තකාලය",
     "databaseFilePath": "./library/library.db",
-    "rebuildDataFolder": "./library"
+    "mediafireDataFile": "./library/mediafire-stats.json"
 }

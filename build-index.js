@@ -162,15 +162,15 @@ async function brokenUrlChecker(rootFolder) {
     }
 }
 
-async function rebuildIndex(dbHandler, filesRootFolder, dataFolder) {
+async function rebuildIndex(dbHandler, config) {
     db = dbHandler;
-    if (copyMediafireStats) extractMediafireStats(dataFolder);
+    if (copyMediafireStats) extractMediafireStats(config.mediafireDataFile);
     //rewriteNameFiles = JSON.parse(fs.readFileSync(`${dataFolder}/rewrite-names.json`, {encoding: 'utf-8'}));
     dbStats = {entriesProcessed: 0, filesAdded: 0, filesUpdated: 0, foldersAdded: 0, foldersUpdated: 0, markedAsDeleted: 0,
          rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
-    await processFilesInFolder(filesRootFolder, 0);
+    await processFilesInFolder(config.filesRootFolder, 0);
     await db.initFolderStructure(); // since the folders may have changed
-    await brokenUrlChecker(filesRootFolder);
+    await brokenUrlChecker(config.filesRootFolder);
     return dbStats;
 }
 
@@ -181,7 +181,7 @@ module.exports = { rebuildIndex, getDate };
 async function runRebuildIndex() {
     db = new dh.DbHandler('./cloud/cloud.db');
     await db.init();
-    await rebuildIndex(db, 'D:/ebooks', './cloud')
+    await rebuildIndex(db, {filesRootFolder: 'D:/ebooks', mediafireDataFile: './cloud'})
     console.log(`final stats ${JSON.stringify(dbStats)}`);
     db.close();
 }

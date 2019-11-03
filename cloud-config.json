@@ -5,9 +5,9 @@
     "serverPort": 8091,
     "webUrlRoot": "http://localhost:8091/cloud/",
 
-    "filesRootFolder": "D:/ebooks",
+    "filesRootFolder": "E:/Bhikkus/Pitigala Gunarathna",
     "indexHtmlTemplate": "./cloud/cloud-template.html",
     "htmlTitle": "cloud",
     "databaseFilePath": "./cloud/cloud.db",
-    "rebuildDataFolder": "./cloud"
+    "mediafireDataFile": "./cloud/mediafire-gunarathana.json"
 }

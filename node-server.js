@@ -108,40 +108,6 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res, next) {
     }
 });
 
-/*server.get(`${config.httpRoot}/download/:entryId`, function (req, res, next) {
-    const entryId = req.params.entryId;
-    db.getEntryFromId(entryId).then(row => {
-        if (!row.name) {
-            sendError(res, `entry ${entryId} does not exist`);
-            return;
-        }
-        const filePath = path.join(config.filesRootFolder, row.url);
-        if (row.type != 'link' && !fs.existsSync(filePath)) {
-            console.error(`file for entry id ${entryId} does not exist ${filePath}`);
-            sendError(res, `file ${filePath} does not exist`);
-            return;
-        }
-        console.log(`download book id ${entryId}, book name ${row.name}`);
-        db.incrementDownloads(entryId); // increment download count
-        if (row.type == 'link') {
-            res.redirect(row.url, next);
-            return;
-        }
-
-        const contentDisposition = row.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
-        const fileName = encodeURI(row.url.split('/').pop());
-        res.writeHead(200, {
-            "Content-Type": `${vh.getTypeInfo(row.type)[3]}; charset=utf-8`,
-            "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${fileName}`,
-        });
-        const stream = fs.createReadStream(filePath);
-        stream.on('error', err => sendError(res, err));
-        stream.pipe(res, {end: true});
-    }).catch(err => {
-        sendError(res, err);
-    });
-});*/
-
 // search index and return rendered html
 server.post(`${config.httpRoot}/api/search/`, async function(req, res, next) {
     try {
