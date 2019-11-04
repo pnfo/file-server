@@ -82,7 +82,7 @@ async function processFolder(fileName, lstat, parentFolder) {
             const params = [name, desc, "coll", parentFolder, 0, rowid]
             await db.runAsync('UPDATE entry SET name = ?, desc = ?, type = ?, folder = ?, is_deleted = ? WHERE rowid = ?', params);
             dbStats.foldersUpdated++;
-            return [rowid, dh.createFileName(name, desc, rowid, type)]
+            return [rowid, dh.createFileName({name, desc, rowid, type})]
         } // if the rowid does not exist we need to add it
     }
 
@@ -91,7 +91,7 @@ async function processFolder(fileName, lstat, parentFolder) {
     rowid = await db.runAsync('INSERT INTO entry(name, desc, type, folder, date_added) VALUES (?,?,?,?,?)', newRow);
     dbStats.foldersAdded++;
     
-    return [rowid, dh.createFileName(name, desc, rowid, type)];
+    return [rowid, dh.createFileName({name, desc, rowid, type})];
 }
 
 
@@ -107,7 +107,7 @@ async function processFile(fileName, lstat, folder) {
             const params = [ name, desc, type, folder, size, 0, rowid ];
             await db.runAsync(`UPDATE entry SET name = ?, desc = ?, type = ?, folder = ?, size = ?, is_deleted = ? WHERE rowid = ?`, params);
             dbStats.filesUpdated++;
-            return [rowid, dh.createFileName(name, desc, rowid, type)];
+            return [rowid, dh.createFileName({name, desc, rowid, type})];
         } // if the rowid does not exist we need add a new row
     } 
 
@@ -130,13 +130,14 @@ async function processFile(fileName, lstat, folder) {
     rowid = await db.runAsync('INSERT INTO entry(name, desc, type, folder, size, date_added, downloads, extra_prop) VALUES (?,?,?,?,?,?,?,?)', newRow);
     dbStats.filesAdded++;
 
-    return [rowid, dh.createFileName(name, desc, rowid, type)];
+    return [rowid, dh.createFileName({name, desc, rowid, type})];
 }
 
-async function brokenUrlChecker(rootFolder) {
-    const rows = await db.allAsync('SELECT rowid, name, desc, type, folder FROM entry WHERE is_deleted = ?', [0]);
+async function brokenUrlChecker(parentFolder) {
+    //const rows = await db.allAsync('SELECT rowid, name, desc, type, folder FROM entry WHERE is_deleted = ?', [0]);
+    const [rows, _1] = await db.getAll(parentFolder);
     for (let row of rows) {
-        const url = path.join(rootFolder, db.getUrl(row));
+        const url = db.getUrl(row);
         if (row.type != 'link' && !fs.existsSync(url)) {
             console.error(`file ${url} does not exist. marking ${row.rowid} as deleted`);
             await db.runAsync(`UPDATE entry SET is_deleted = ? WHERE rowid = ?`, [1, row.rowid]);
@@ -150,14 +151,14 @@ async function brokenUrlChecker(rootFolder) {
     }
 }
 
-async function rebuildIndex(dbHandler, config) {
+async function rebuildIndex(dbHandler, folderFilesRoot, parentFolder, mediafireDataFile) {
     db = dbHandler;
-    if (copyMediafireStats) extractMediafireStats(config.mediafireDataFile);
+    if (copyMediafireStats) extractMediafireStats(mediafireDataFile);
     dbStats = {entriesProcessed: 0, filesAdded: 0, filesUpdated: 0, foldersAdded: 0, foldersUpdated: 0, markedAsDeleted: 0,
          rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
-    await processFilesInFolder(config.filesRootFolder, 0);
+    await processFilesInFolder(folderFilesRoot, parentFolder);
     await db.initFolderStructure(); // since the folders may have changed
-    await brokenUrlChecker(config.filesRootFolder);
+    await brokenUrlChecker(parentFolder);
     return dbStats;
 }
 
@@ -166,9 +167,10 @@ module.exports = { rebuildIndex, getDate };
 
 // run inline for testing
 async function runRebuildIndex() {
-    db = new dh.DbHandler('./cloud/cloud.db');
+    const config = {data: './cloud/cloud-dev.db'};
+    db = new dh.DbHandler(config);
     await db.init();
-    await rebuildIndex(db, {filesRootFolder: 'D:/ebooks', mediafireDataFile: './cloud'})
+    await rebuildIndex(db, 'D:/ebooks', 0, './cloud/somefile')
     console.log(`final stats ${JSON.stringify(dbStats)}`);
     db.close();
 }

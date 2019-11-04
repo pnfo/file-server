@@ -28,7 +28,7 @@ function parseFileName(fileName) {
     if (!res) console.error(`Folder name ${fileName} can not be parsed`);
     return [res[1].trim(), res[2] || '', res[3] || 0, 'coll'];
 }*/
-function createFileName(name, desc, rowid, type) {
+function createFileName({name, desc, rowid, type}) {
     desc = desc ? `[${desc}]` : '';
     rowid = rowid ? `{${rowid}}` : '';
     type = type != 'coll' ? `.${type}` : '';
@@ -39,10 +39,11 @@ function createFileName(name, desc, rowid, type) {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 class DbHandler {
-    constructor(dbPath) {
-        this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, err => {
+    constructor(config) {
+        this.config = config;
+        this.db = new sqlite3.Database(config.databaseFilePath, sqlite3.OPEN_READWRITE, err => {
             if (err) {
-                console.error(`Failed to open ${dbPath}. ${err.message}`);
+                console.error(`Failed to open ${config.databaseFilePath}. ${err.message}`);
                 throw err;
             }
         });
@@ -73,11 +74,11 @@ class DbHandler {
         });
         for (let [rowid, parents] of Object.entries(this.parentsMap)) {
             parents.reverse(); // in-place - order bigger to smaller
-            this.folderPaths[rowid] = parents.map(p => createFileName(p.name, p.desc, p.rowid, p.type)).join('/');
+            this.folderPaths[rowid] = parents.map(p => createFileName(p)).join('/');
         }
     }
     getUrl(row) {
-        return path.join(this.folderPaths[row.folder] || '', createFileName(row.name, row.desc, row.rowid, row.type));
+        return path.join(this.config.filesRootFolder, this.folderPaths[row.folder] || '', createFileName(row));
     }
 
     async search(rowid, terms) { // folders are not searched

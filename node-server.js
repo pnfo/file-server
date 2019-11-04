@@ -40,7 +40,7 @@ const vh = require('./vue-handler');
 const [pageRR, searchRR] = vh.setupVueSSR(config);
 
 const dh = require('./db-handler');
-const db = new dh.DbHandler(config.databaseFilePath);
+const db = new dh.DbHandler(config);
 
 const getContext = (parents, extra) => { return { 
     title: extra + (parents ? parents.slice(-1)[0].name : config.rootFolderName), 
@@ -93,13 +93,13 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res, next) {
             db.incrementDownloads(entryId); // increment download count
 
             const contentDisposition = entry.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
-            const fileName = encodeURI(dh.createFileName(entry.name, entry.desc, '', entry.type));
+            const fileName = encodeURI(dh.createFileName({name: entry.name, desc: entry.desc, rowid: '', type: entry.type}));
             res.writeHead(200, {
                 "Content-Type": `${vh.getTypeInfo(entry.type)[3]}; charset=utf-8`,
                 "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${fileName}`,
             });
-            const filePath = path.join(config.filesRootFolder, db.getUrl(entry));
-            const stream = fs.createReadStream(filePath);
+            //const filePath = path.join(config.filesRootFolder, db.getUrl(entry));
+            const stream = fs.createReadStream(db.getUrl(entry));
             stream.on('error', err => sendError(res, err));
             stream.pipe(res, {end: true});
         }
@@ -124,10 +124,16 @@ server.post(`${config.httpRoot}/api/search/`, async function(req, res, next) {
     }
 });
 
-// rebuild index
-server.get(`${config.httpRoot}/api/rebuild-index`, function(req, res, next) {
-    bi.rebuildIndex(db, config).then(dbStats => {
-        console.log(`rebuild index final stats ${JSON.stringify(dbStats)}`);
+// rebuild index on some folder - 0 for root folder
+server.get(`${config.httpRoot}/api/rebuild-index/:folderId`, function(req, res, next) {
+    const folderId = parseInt(req.params.folderId);
+    if (isNaN(folderId) || (folderId && !db.rowid2Row[folderId])) {
+        sendError(res, `supplied folderid is not correct.`);
+        return;
+    }
+    const folderFilesRoot = path.join(config.filesRootFolder, folderId ? db.folderPaths[folderId] : '');
+    bi.rebuildIndex(db, folderFilesRoot, folderId, config.mediafireDataFile).then(dbStats => {
+        console.log(`rebuild index on ${folderFilesRoot} final stats ${JSON.stringify(dbStats)}`);
         res.send(200, dbStats);
     }).catch(err => {
         sendError(res, err);
