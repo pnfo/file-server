@@ -53,10 +53,10 @@ class DbHandler {
         this.childrenIdMap = {};
         this.folderPaths = {};
 
-        //const rows = await this.allAsync(`SELECT rowid, name, desc, type, folder FROM entry WHERE type = ? AND is_deleted = ?`, ['coll', 0]);
+        // LEFT JOIN is needed to handle empty folders
         const rows = await this.allAsync(`SELECT e.rowid, e.name, e.desc, e.type, e.folder, 
-                                        COUNT(e.rowid) AS num_entries, SUM(e2.size) AS total_size FROM entry e
-                                        INNER JOIN entry e2 ON e2.folder = e.rowid
+                                        COUNT(e2.rowid) AS num_entries, SUM(e2.size) AS total_size FROM entry e
+                                        LEFT JOIN entry e2 ON e2.folder = e.rowid
                                         WHERE e.type = ? AND e.is_deleted = ? GROUP BY e2.folder`, ['coll', 0]);
         rows.forEach(row => {
             this.rowid2Row[row.rowid] = row;
@@ -66,7 +66,7 @@ class DbHandler {
             const child = row.rowid;
             this.parentsMap[child] = [row];
             while (row.folder != 0) { 
-                this.childrenIdMap[row.folder].push(row.rowid);
+                this.childrenIdMap[row.folder].push(child);
                 row = this.rowid2Row[row.folder];
                 this.parentsMap[child].push(row);
             }

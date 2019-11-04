@@ -9,5 +9,5 @@
     "filesRootFolder": "/datadrive/public/cloud",
     "indexHtmlTemplate": "./cloud/cloud-template.html",
     "databaseFilePath": "./cloud/cloud.db",
-    "mediafireDataFile": "./cloud/mediafire-gunarathana.json"
+    "mediafireDataFile": "./cloud/mediafire-sudassana.json"
 }

@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Launch Program",
             "program": "${workspaceFolder}\\node-server.js",
-            "args": ["cloud-config.json"]
+            "args": ["cloud/cloud-config-dev.json"]
         }
     ]
 }
