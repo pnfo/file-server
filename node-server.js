@@ -11,10 +11,15 @@
  * npm install restify vue vue-server-renderer sqlite3
  * 
  * dev run as follows (windows)
- * npx nodemon .\node-server.js library-config.json
+ * npx nodemon node-server.js library-config-dev.json
+ * dev writes to a dev db and does not write to the production db
  * 
  * prod run as follows (ubuntu)
- * pm2 start node-server.js -- library-config.json
+ * pm2 start node-server.js --name library -f -- library-config.json
+ * params after -- are passed to the node script
+ * pm2 save (save after changing any process parameters)
+ * 
+ * git push from the production server regularly to backup the production db to git
  */
 const fs = require('fs'), path = require('path');
 const bi = require('./build-index');

@@ -29,7 +29,7 @@ td { padding: 0.1rem 0.3rem 0.1rem 0.3rem; word-break: break-word; }
 tbody td.folders { color: rgb(151, 151, 151); }
 td.downloads,td.size { text-align: right; }
 td.size { word-break: normal;}
-
+td.folder a { text-decoration: none; color: darkblue; }
 
 nav.top { font-size: 1.2rem; text-align: center; display: flex; align-items: center;  flex-wrap: wrap; margin: 0.2rem; background-color: whitesmoke; }
 .nav-link { padding: 0.5rem 0rem 0.5rem 0.7rem; }
@@ -43,7 +43,6 @@ a.entry-name {
     padding: 0.2rem 0.1rem;
     text-decoration: none;
     color: darkblue;
-    line-height: 1;
     cursor: pointer;
     display: inline-flex;
     align-items: center;

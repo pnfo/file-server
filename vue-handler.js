@@ -53,12 +53,14 @@ const componentList = {
             <td class="name">
                 <a :class="'entry-name ' + entry.type" :tip="tipText" :href="webUrl + entry.rowid">
                     <i v-bind:class="iconStr" :style="iconStyle"></i>
-                    <span>{{ name }}</span>
-                    <span class="entry-details">{{ details }}</span>
+                    <span>
+                        <span>{{ name }}</span>
+                        <span v-if="details.length" class="entry-details">{{ details }}</span>
+                    </span>
                 </a>
             </td>
             <td><i class="fad fa-share-alt share-icon"></i></td>
-            <td v-show="columns.includes('folder')" class="folder">{{ entry.folder_name }}</td>
+            <td v-show="columns.includes('folder')" class="folder"><a :href="webUrl + entry.folder">{{ entry.folder_name }}</a></td>
             <td v-show="columns.includes('downloads')" class="downloads">{{ downloads }}</td>
             <td v-show="columns.includes('date_added')" class="date_added">{{ entry.date_added }}</td>
             <td v-show="columns.includes('size')" class="size">{{ sizeStr }}</td>

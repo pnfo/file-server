@@ -21,6 +21,7 @@ async function performSearch(e) {
     console.log(query);
     if (query == prevQuery) return;
     prevQuery = query; // prevent unnecessary fetch requests
+    if (requestTimer) clearTimeout(requestTimer);
     resultsDiv.empty();
     if (query.length < resultSettings.minQueryLength) {
         statusDiv.text(`අඩුම තරමේ අකුරු ${resultSettings.minQueryLength} ක් වත් ඇතුළු කරන්න.`);
@@ -31,16 +32,17 @@ async function performSearch(e) {
         statusDiv.text(`සිංග්ලිෂ් වලින් සෙවීමේ දී උපරිමය අකුරු ${resultSettings.maxSinglishLength} කට සීමා කර ඇත.`);
         return;
     }
-    this.scheduleSearchIndex(query); // delay to prevent multiple queries being sent when typing
+    requestTimer = setTimeout(() => sendSearchQuery(query), resultSettings.searchDelay);
+    //this.scheduleSearchIndex(query); // delay to prevent multiple queries being sent when typing
 }
 
 function isSinglishQuery(query) {
 	return /[A-Za-z]/.test(query);
 }
-function scheduleSearchIndex(query) {
+/*function scheduleSearchIndex(query) {
     if (requestTimer) clearTimeout(requestTimer);
     requestTimer = setTimeout(() => sendSearchQuery(query), resultSettings.searchDelay);
-}
+}*/
 
 async function sendSearchQuery(query) {
     statusDiv.html(`<i class="fad fa-spinner fa-spin"></i> සොයමින්... මදක් ඉවසන්න.`);
