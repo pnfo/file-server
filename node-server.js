@@ -11,7 +11,7 @@
  * npm install restify vue vue-server-renderer sqlite3
  * 
  * dev run as follows (windows)
- * npx nodemon node-server.js library-config-dev.json
+ * npx nodemon node-server.js library/library-config-dev.json
  * dev writes to a dev db and does not write to the production db
  * 
  * prod run as follows (ubuntu)
@@ -98,7 +98,8 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res, next) {
             db.incrementDownloads(entryId); // increment download count
 
             const contentDisposition = entry.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
-            const fileName = encodeURI(dh.createFileName({name: entry.name, desc: entry.desc, rowid: '', type: entry.type}));
+            const fileName = encodeURI(   // chrome does not like comma in filename - so it is removed
+                dh.createFileName({name: entry.name, desc: entry.desc, rowid: '', type: entry.type}).replace(/,/g, ''));
             res.writeHead(200, {
                 "Content-Type": `${vh.getTypeInfo(entry.type)[3]}; charset=utf-8`,
                 "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${fileName}`,

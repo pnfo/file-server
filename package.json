@@ -10,7 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "restify": "^8.4.0",
-    "sqlite3": "^4.1.0",
+    "sqlite3": "^4.1.1",
     "vkbeautify": "^0.99.3",
     "vue": "^2.6.10",
     "vue-server-renderer": "^2.6.10"
