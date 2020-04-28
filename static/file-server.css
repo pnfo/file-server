@@ -1,17 +1,22 @@
 @font-face {
-    font-family: 'Noto Serif Sinhala';
-    src: url('NotoSerifSinhala-Regular.ttf') format('truetype');
+    font-family: 'Sinhala Normal';
+    src: url('UN-Abhaya.ttf') format('truetype');
     font-weight: normal;
 }
 @font-face {
+    font-family: 'Sinhala Styled';
+    src: url('UN-Malithi-4.ttf') format('truetype');
+    font-weight: normal;
+}
+/*@font-face {
     font-family: 'Noto Serif Sinhala';
     src: url('NotoSerifSinhala-Bold.ttf') format('truetype');
     font-weight: bold;
-}
+}*/
 
 body {
-    font-family: 'Noto Serif Sinhala';
-    font-size: 15px;
+    font-family: 'Sinhala Normal';
+    font-size: 17px;
     margin: 0px;
 }
 @media screen and (max-width: 500pt) {
@@ -22,7 +27,7 @@ div.top-container { width: 100%; max-width: 800pt; margin: 0pt auto; height: 100
 
 table { border: 1px solid black; width: 100%; margin: 0.5rem 0rem 0.5rem 0rem; }
 #search-results table { border: none; }
-thead td { font-weight: bold; padding: 0.3rem; background-color: antiquewhite; }
+thead td { color: brown; padding: 0.3rem; background-color: antiquewhite; }
 tbody tr:nth-child(even) {background-color: whitesmoke; }
 tbody tr:hover { background-color: antiquewhite; }
 td { padding: 0.1rem 0.3rem 0.1rem 0.3rem; word-break: break-word; }
@@ -52,21 +57,31 @@ a.entry-name:hover { color: blue; }
 a.entry-name i { padding: 0 0.6rem 0 0.2rem; font-size: 1.5rem; }
 td.name .entry-details { font-size: 0.7rem; color: gray; padding-left: 0.4rem;}
 
-a.button { text-decoration: none; margin: 0.2rem 0.2rem; padding: 0.2rem 0.2rem; border: 1px solid black; border-radius: 5px; background-color: #c2eab140;}
+a.button { text-decoration: none; margin: 0.2rem 0.2rem; padding: 0.2rem 0.2rem; display: inline-flex; align-items: center;
+    border: 1px solid black; border-radius: 5px; background-color: #c2eab140;}
 a.button:hover { background-color: white; }
 a.button i { padding: 0 0.4rem 0 0.1rem; }
 
-.share-icon { color: gray; cursor: pointer; font-size: 0.8rem; padding: 0.2rem;}
+.file-info { padding: 0.5rem; }
+.file-info div { padding: 0.2rem; }
+.file-name { font-size: 1.5rem; display: flex; align-items: center; }
+.file-name i { font-size: 7rem; padding-right: 1rem; }
+.file-details { text-align: justify; color: grey; line-height: 1.3; font-size: 1rem; }
+div.download-button { font-size: 1.5rem; padding: 1rem 0rem; font-family: 'Sinhala Styled'; }
+div.download-button a.button { padding: 0.5rem; }
+
+.share-icon { color: gray; cursor: pointer; padding: 0.2rem;}
 .share-icon:hover { color: blue; }
+i.share-icon { font-size: 0.8rem; }
 
 #search-content { margin: 1.4rem 0rem; background-color: rgba(105, 192, 167, 0.1); border-radius: 3px; }
-#search-status { font-size: 0.9rem; text-align: center; padding: 0.4rem; color: darkred; font-style: italic;}
+#search-status { font-size: 0.85rem; text-align: center; padding: 0.4rem; color: darkred; }
 
 #search-bar-div { display: flex; justify-content: center; flex-flow: row nowrap; align-items: center; }
 .search-bar {
     flex: 1 1;
     vertical-align: middle;
-    font-family: 'Noto Serif Sinhala';
+    font-family: 'Sinhala Normal';
     font-size: 1.2rem;
     margin: 0.2rem 0.2rem 0.2rem 0.2rem;
     border: 1px solid gray;

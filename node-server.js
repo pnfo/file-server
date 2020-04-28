@@ -47,10 +47,10 @@ const [pageRR, searchRR] = vh.setupVueSSR(config);
 const dh = require('./db-handler');
 const db = new dh.DbHandler(config);
 
-const getContext = (parents, extra) => { return { 
-    title: extra + (parents ? parents.slice(-1)[0].name : config.rootFolderName), 
+const getContext = (parents, extra) => ({ 
+    title: extra + (parents ? (parents.slice(-1)[0].name + ' ගොනුව') : config.rootFolderName + ' මුල් පිටුව'), 
     webUrl: config.webUrlRoot,
-}; };
+});
 
 // return all books page
 server.get(`${config.httpRoot}/:entryId/all`, async function(req, res, next) {
@@ -59,7 +59,7 @@ server.get(`${config.httpRoot}/:entryId/all`, async function(req, res, next) {
         const [entries, parents] = await db.getAll(entryId);
         console.log(`all files has ${entries.length} files`);
         const data = { entries, parents, entryId, columns: ['size', 'folder'] };
-        const html = await pageRR.renderToString(vh.vueFullPage(data), getContext(parents, 'සියලු පොත් < '));
+        const html = await pageRR.renderToString(vh.vueListPage(data), getContext(parents, 'සියලු පොත් < '));
         sendHtml(res, html);
     } catch(err) {
         sendError(res, err);
@@ -75,7 +75,7 @@ server.get(`${config.httpRoot}/:entryId/newly-added/:duration`, async function(r
         const [entries, parents] = await db.getRecentlyAdded(entryId, pastDate);
         console.log(`recent files in ${entryId} from ${backDays}:${pastDate} has ${entries.length} files`);
         const data = { entries, parents, entryId, columns: ['size', 'date_added'] };
-        const html = await pageRR.renderToString(vh.vueFullPage(data), getContext(parents, 'අලුත් පොත් < '));
+        const html = await pageRR.renderToString(vh.vueListPage(data), getContext(parents, 'අලුත් පොත් < '));
         sendHtml(res, html);
     } catch(err) {
         sendError(res, err);
@@ -91,26 +91,44 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res, next) {
             console.log(`view folder page ${entryId} : ${entryId ? entry.name : 'root folder'}`);
             const [entries, parents] = await db.getChildren(entryId);
             const data = { entries, parents, entryId, columns: ['size', 'downloads'] };
-            const html = await pageRR.renderToString(vh.vueFullPage(data), getContext(parents, ''));
+            const html = await pageRR.renderToString(vh.vueListPage(data), getContext(parents, ''));
             sendHtml(res, html);
         } else {
-            console.log(`download file ${entryId} : ${entry.name}.${entry.type}`);
-            db.incrementDownloads(entryId); // increment download count
-
-            const contentDisposition = entry.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
-            const fileName = encodeURI(   // chrome does not like comma in filename - so it is removed
-                dh.createFileName({name: entry.name, desc: entry.desc, rowid: '', type: entry.type}).replace(/,/g, ''));
-            res.writeHead(200, {
-                "Content-Type": `${vh.getTypeInfo(entry.type)[3]}; charset=utf-8`,
-                "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${fileName}`,
-            });
-            //const filePath = path.join(config.filesRootFolder, db.getUrl(entry));
-            const stream = fs.createReadStream(db.getUrl(entry));
-            stream.on('error', err => sendError(res, err));
-            stream.pipe(res, {end: true});
+            console.log(`view file page ${entryId} : ${entry.name}`)
+            const data = { entry, parents: db.parentsMap[entry.folder], entryId }
+            const context = { title: entry.name, webUrl: config.webUrlRoot }
+            const html = await pageRR.renderToString(vh.vueFilePage(data), context)
+            sendHtml(res, html)
         }
     } catch(err) {
         sendError(res, err);
+    }
+});
+
+server.get(`${config.httpRoot}/:entryId/download`, async function(req, res, next) {
+    try {
+        const entryId = parseInt(req.params.entryId);
+        const entry = await db.getEntry(entryId);
+        if (entryId == 0 || entry.type == 'coll') { // root folder or sub folder
+            sendError(res, 'Can not download folder')
+            return
+        }
+        console.log(`download file ${entryId} : ${entry.name}.${entry.type}`);
+        db.incrementDownloads(entryId); // increment download count
+
+        const contentDisposition = entry.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
+        const fileName = encodeURI(   // chrome does not like comma in filename - so it is removed
+            dh.createFileName({name: entry.name, desc: entry.desc, rowid: '', type: entry.type}).replace(/,/g, ''));
+        res.writeHead(200, {
+            "Content-Type": `${vh.getTypeInfo(entry.type)[3]}; charset=utf-8`,
+            "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${fileName}`,
+        });
+        //const filePath = path.join(config.filesRootFolder, db.getUrl(entry));
+        const stream = fs.createReadStream(db.getUrl(entry));
+        stream.on('error', err => sendError(res, err));
+        stream.pipe(res, {end: true});
+    } catch(err) { 
+        sendError(res, err); 
     }
 });
 

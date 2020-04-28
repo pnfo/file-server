@@ -81,6 +81,7 @@ class DbHandler {
         return path.join(this.config.filesRootFolder, this.folderPaths[row.folder] || '', createFileName(row));
     }
 
+    /* TODO on the file pages the whole library is searched - since rowid is of a file */
     async search(rowid, terms) { // folders are not searched
         // sqlite will error if number of experessions is more than 1000, so do in batches
         const batchSize = 800, finalRows = []; 

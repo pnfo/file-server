@@ -32,22 +32,24 @@ function formatNumber(num) {
     return num ? num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,') : '';
 }
 
+const computedProps = {
+    downloads: function() { return formatNumber(this.entry.downloads); },
+    //typeStr: function() { return getTypeInfo(this.entry.type)[1]; },
+    sizeStr: function() { return readableSize(this.entry.size); },
+    iconStr: function() { return getTypeInfo(this.entry.type)[0]; },
+    iconStyle: function() { return 'color:' + getTypeInfo(this.entry.type)[4]; },
+    tipText: function() { return getTypeInfo(this.entry.type)[2]; },
+    details: function() {
+        if (this.entry.type != 'coll') return this.entry.desc;
+        return `Files: ${this.entry.num_entries}, Size: ${readableSize(this.entry.total_size)}`; 
+    },
+    name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`;},
+}
+
 const componentList = {
     'entry': {
         props: ['entry', 'columns'],
-        computed: { 
-            downloads: function() { return formatNumber(this.entry.downloads); },
-            //typeStr: function() { return getTypeInfo(this.entry.type)[1]; },
-            sizeStr: function() { return readableSize(this.entry.size); },
-            iconStr: function() { return getTypeInfo(this.entry.type)[0]; },
-            iconStyle: function() { return 'color:' + getTypeInfo(this.entry.type)[4]; },
-            tipText: function() { return getTypeInfo(this.entry.type)[2]; },
-            details: function() {
-                if (this.entry.type != 'coll') return this.entry.desc;
-                return `Files: ${this.entry.num_entries}, Size: ${readableSize(this.entry.total_size)}`; 
-            },
-            name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`;},
-        },
+        computed: computedProps,
         // folder_name need to be added to the entry/row
         template: `<tr class="entry" :entry-id="entry.rowid">
             <td class="name">
@@ -113,7 +115,7 @@ const componentList = {
                         <i class="fas fa-fire" style="color: orange;"></i><span>අලුත්</span><span class="ss-hide">{{ ' ' + fileTypeName }}</span>
                     </a>
                 </div>
-                <div id="search-status">{{ fileTypeName + ' සෙවීම සඳහා ඉහත කොටුවේ type කරන්න.' }}</div>
+                <div id="search-status">{{ 'මෙම ගොනුව තුළ ' + fileTypeName + ' සෙවීම සඳහා ඉහත කොටුවේ type කරන්න.' }}</div>
                 <div id="search-results"></div>
             </div>
         </div>`
@@ -127,13 +129,57 @@ function vueSearchResult(data) {
     });
 }
 
-function vueFullPage(data) {
+function vueListPage(data) {
     return new Vue({
         data: data,
         template: `<div class="content" :entry-id="entryId" :web-url="webUrl">
             <top-nav :parents="parents" :entry-id="entryId"></top-nav>
             <entry-list v-if="entries.length" v-bind:entries="entries" :columns="columns"></entry-list>
             <div class="empty-placeholder" v-if="!entries.length">මෙම ගොනුව හිස්ය.</div>
+        </div>`,
+    });
+}
+
+function vueFilePage(data) {
+    return new Vue({
+        data: data,
+        computed: computedProps,
+        template: `<div class="content" :entry-id="entryId" :web-url="webUrl">
+            <top-nav :parents="parents" :entry-id="entryId"></top-nav>
+            
+            <div class="file-info">
+                <div :class="'file-name ' + entry.type">
+                    <i :class="iconStr" :style="iconStyle"></i>
+                    <span>{{ name }}</span>
+                </div>
+                <div v-if="entry.type == 'mp3'">
+                    <audio controls :src="webUrl +  entryId + '/download'" preload="auto">
+                        Your browser does not support the <code>audio</code> element.
+                    </audio>
+                </div>
+                
+                <div class="downloads"><span>භාගත කරන ලද වාර ගණන : </span>{{ downloads }}</div>
+                <div class="date_added"><span>වෙබ් අඩවියට ඇතුල් කල දිනය : </span>{{ entry.date_added }}</div>
+                <div class="size"><span>file එකේ ප්‍රමාණය (size) : </span>{{ sizeStr }}</div>
+
+                <div class="download-button">
+                    <a class="button" :href="webUrl +  entryId + '/download'">
+                        <i class="fas fa-download" style="color: green;"></i><span>{{ tipText }}</span>
+                    </a>
+                </div>
+
+                <div>
+                    <a class="button share-icon">
+                        <i class="fad fa-share-alt"></i> share කිරීම සඳහා link එකක් ලබාගන්න
+                    </a>
+                </div>
+
+                <div v-if="details.length" class="entry-details">{{ details }}</div>
+                <div v-if="details.length < 10" class="file-details">මේ පොත ඔබ කියවා තිබේනම් හෝ පොත ගැන යම් විස්තරයක් දන්නේ නම් 
+                    මේ පිටුවට පැමිණෙන අයට දැනගැනීම පිණිස මෙතැන පලකිරීමට සුදුසු යම් විස්තරයක් හැඳින්වීමක් ඔබට ලියා අප වෙත email කරන්න. 
+                    පොතේ link එකද සඳහන් කිරීමට අමතක කරන්න එපා. සිංහලෙන් හෝ ඉංග්‍රීසියෙන් ලියන්න. සිංග්ලිෂ් වලින් ලිවීමෙන් වලකින්න. 
+                </div>
+            </div>
         </div>`,
     });
 }
@@ -158,4 +204,4 @@ function setupVueSSR(config) {
     return [pageRR, searchRR];
 }
 
-module.exports = { vueSearchResult, vueFullPage, getTypeInfo, setupVueSSR };
+module.exports = { vueSearchResult, vueListPage, vueFilePage, getTypeInfo, setupVueSSR };

@@ -68,7 +68,7 @@ async function sendSearchQuery(query) {
 
 const clipb = new ClipboardJS('.share-icon', {
     text: function(icon) {
-        const entryId = $(icon).parents('tr[entry-id]').attr('entry-id');
+        const entryId = $(icon).parents('[entry-id]').first().attr('entry-id');
         return $('div.content').attr('web-url') + entryId;
     }
 });
@@ -79,45 +79,3 @@ function showToast(toastMsg) {
     // After 3 seconds, remove the show class from DIV
     setTimeout(function(){ toast.hide(); }, 3000);
 }
-/*
-// old code
-
-
-/*$('.TOC-text .material-icons.parent').click(e => {
-    const icon = $(e.currentTarget);
-    icon.parent().toggleClass('closed').siblings('.TOC-children').toggle();
-    icon.text(icon.text() == 'expand_less' ? 'arrow_downward' : 'expand_less');
-});
-
-$(document).keydown(function(e) {
-    switch(e.which) {
-        case 37: // left
-        $('nav.bottom a.prev').get(0).click();
-        break;
-
-        case 39: // right
-        $('nav.bottom a.next').get(0).click();
-        break;
-
-        default: return; // exit this handler for other keys
-    }
-    e.preventDefault(); // prevent the default action (scroll / move caret)
-});
-*/
-/*$('body').on('click', 'a.entry', async function(e) {
-    const entryElem = $(e.currentTarget);
-    const response = await fetch('/api/increment/' + entryElem.attr('entry-id'));
-    console.log(response);
-    downloadFile(entryElem.attr('url'));
-});
-
-const rootFileUrl = "https://tipitaka.lk/files/public/library/";
-function downloadFile(url) {
-    var a = window.document.createElement('a');
-    a.href = rootFileUrl + url;
-    a.target = '_blank';
-    a.download = url.split('/').pop();
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a)
-}*/
