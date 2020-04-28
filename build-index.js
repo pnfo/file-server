@@ -5,6 +5,8 @@
  * File name format - name[desc]{rowid}.type
  * Only specify {rowid} if you need to replace/update an exisiting file/folder with a new file/folder
  * For new files keep the {rowid} empty.
+ * 
+ * update: 2020 april - rebuild index is now not recursive, mediafire code commented out
  */
 "use strict";
 
@@ -14,11 +16,11 @@ const path = require('path');
 const assert = require('assert');
 const dh = require('./db-handler');
 
-const getMFMapKey = (name, desc, type) => `${name}@${desc}@${type}`;
+//const getMFMapKey = (name, desc, type) => `${name}@${desc}@${type}`;
 const getDate = (date) => date.toISOString().split('T')[0];
 let db;
 
-let mfBooksList = {}, copyMediafireStats = false;
+/*let mfBooksList = {}, copyMediafireStats = false;
 function extractMediafireStats(mediafireDataFile) {
     mfBooksList = {};
     JSON.parse(fs.readFileSync(mediafireDataFile, {encoding: 'utf-8'})).forEach(mfBook => {
@@ -34,7 +36,7 @@ function extractMediafireStats(mediafireDataFile) {
         });
     });
     console.log(`mediafire files list size: ${Object.keys(mfBooksList).length}`);
-}
+}*/
 
 function getIgnoreFiles(fullPath) {
     const ignoreFileName = path.join(fullPath, 'ignore-files.txt');
@@ -46,7 +48,7 @@ function getIgnoreFiles(fullPath) {
 
 // go through all files 
 let dbStats = {};
-async function processFilesInFolder(fullPath, parentFolder) {
+async function processFilesInFolder(fullPath, parentFolder, isRecursive) {
     const filesList = fs.readdirSync(fullPath);
     const ignoreFileList = getIgnoreFiles(fullPath);
     for (const fileName of filesList) {
@@ -57,7 +59,7 @@ async function processFilesInFolder(fullPath, parentFolder) {
         let addedRowid, newFileName;
         if (lstat.isDirectory()) {
             [addedRowid, newFileName] = await processFolder(fileName, lstat, parentFolder);
-            await processFilesInFolder(filePath, addedRowid); // recursively process sub folders
+            if (isRecursive) await processFilesInFolder(filePath, addedRowid, isRecursive); // recursively process sub folders
         } else {
             [addedRowid, newFileName] = await processFile(fileName, lstat, parentFolder);
         }
@@ -115,17 +117,17 @@ async function processFile(fileName, lstat, folder) {
     let newRow = [ name, desc, type, folder, size]; 
 
     // 1) if in mediafire copy over the date, downloads and old_url
-    const mapKey = getMFMapKey(name, desc, type);
-    if (mfBooksList[mapKey]) {
-        const mfBook = mfBooksList[mapKey];
-        newRow = [...newRow, getDate(new Date(mfBook.date_added)), mfBook.downloads, JSON.stringify({old_url: mfBook.old_url})];
-        delete mfBooksList[mapKey]; // delete used so unused can be tracked
-        dbStats.rowsFoundInMF++;
-    } else {
-        if (copyMediafireStats) console.log(`new file not in mediafire found ${mapKey}`);
+    //const mapKey = getMFMapKey(name, desc, type);
+    //if (mfBooksList[mapKey]) {
+    //    const mfBook = mfBooksList[mapKey];
+    //    newRow = [...newRow, getDate(new Date(mfBook.date_added)), mfBook.downloads, JSON.stringify({old_url: mfBook.old_url})];
+    //    delete mfBooksList[mapKey]; // delete used so unused can be tracked
+    //    dbStats.rowsFoundInMF++;
+    //} else {
+    //    if (copyMediafireStats) console.log(`new file not in mediafire found ${mapKey}`);
         newRow = [...newRow, getDate(lstat.birthtime), 0, '{}'];
-        dbStats.rowsNotFoundInMF++;
-    }
+    //    dbStats.rowsNotFoundInMF++;
+    //}
 
     rowid = await db.runAsync('INSERT INTO entry(name, desc, type, folder, size, date_added, downloads, extra_prop) VALUES (?,?,?,?,?,?,?,?)', newRow);
     dbStats.filesAdded++;
@@ -144,19 +146,18 @@ async function brokenUrlChecker(parentFolder) {
             dbStats.markedAsDeleted++;
         }
     }
-    if (copyMediafireStats) {
+    /*if (copyMediafireStats) {
         for (const mapKey in mfBooksList) {
             console.log(`unused mf entry ${mapKey} : ${JSON.stringify(mfBooksList[mapKey])}`);
         }
-    }
+    }*/
 }
 
-async function rebuildIndex(dbHandler, folderFilesRoot, parentFolder, mediafireDataFile) {
+async function rebuildIndex(dbHandler, folderFilesRoot, parentFolder, isRecursive) {
     db = dbHandler;
-    if (copyMediafireStats) extractMediafireStats(mediafireDataFile);
-    dbStats = {entriesProcessed: 0, filesAdded: 0, filesUpdated: 0, foldersAdded: 0, foldersUpdated: 0, markedAsDeleted: 0,
-         rowsFoundInMF: 0, rowsNotFoundInMF: 0, linksReplaced: 0};
-    await processFilesInFolder(folderFilesRoot, parentFolder);
+    //if (copyMediafireStats) extractMediafireStats(mediafireDataFile);
+    dbStats = {entriesProcessed: 0, filesAdded: 0, filesUpdated: 0, foldersAdded: 0, foldersUpdated: 0, markedAsDeleted: 0, linksReplaced: 0};
+    await processFilesInFolder(folderFilesRoot, parentFolder, isRecursive);
     await db.initFolderStructure(); // since the folders may have changed
     await brokenUrlChecker(parentFolder);
     return dbStats;

@@ -22,8 +22,10 @@
  * git push from the production server regularly to backup the production db to git
  */
 const fs = require('fs'), path = require('path');
+const vkb = require('vkbeautify');
 const bi = require('./build-index');
 const singlish = require('./singlish');
+const password = require('./passwords')
 
 const restify = require('restify');
 const server = restify.createServer({maxParamLength: 1000});
@@ -149,15 +151,20 @@ server.post(`${config.httpRoot}/api/search/`, async function(req, res, next) {
 });
 
 // rebuild index on some folder - 0 for root folder
-server.get(`${config.httpRoot}/api/rebuild-index/:folderId`, function(req, res, next) {
+server.get(`${config.httpRoot}/api/rebuild-index/:folderId/:password`, function(req, res, next) {
     const folderId = parseInt(req.params.folderId);
     if (isNaN(folderId) || (folderId && !db.rowid2Row[folderId])) {
         sendError(res, `supplied folderid is not correct.`);
         return;
     }
+    if (req.params.password != password.word) {
+        sendError(res, `supplied password ${req.params.password} is not correct.`);
+        return;
+    }
     const folderFilesRoot = path.join(config.filesRootFolder, folderId ? db.folderPaths[folderId] : '');
-    bi.rebuildIndex(db, folderFilesRoot, folderId, config.mediafireDataFile).then(dbStats => {
-        console.log(`rebuild index on ${folderFilesRoot} final stats ${JSON.stringify(dbStats)}`);
+    bi.rebuildIndex(db, folderFilesRoot, folderId, false).then(dbStats => {
+        const dbStatsStr = vkb.json(JSON.stringify(dbStats))
+        console.log(`rebuild index on ${folderFilesRoot} final stats ${dbStatsStr}`);
         res.send(200, dbStats);
     }).catch(err => {
         sendError(res, err);

@@ -109,10 +109,10 @@ const componentList = {
                     <i class="fad fa-search" style="padding: 0rem 0.3rem;"></i>
                     <input class="search-bar" type="text" :placeholder="fileTypeName + ' සොයන්න'">
                     <a class="button" :href="webUrl +  entryId + '/all'">
-                        <i class="fas fa-books" style="color: green;"></i><span>සියලු</span><span class="ss-hide">{{ ' ' + fileTypeName }}</span>
+                        <i class="fas fa-books" style="color: green;"></i><span>සියලු<span class="ss-hide">{{ ' ' + fileTypeName }}</span></span>
                     </a>
                     <a class="button" :href="webUrl + entryId + '/newly-added/90'">
-                        <i class="fas fa-fire" style="color: orange;"></i><span>අලුත්</span><span class="ss-hide">{{ ' ' + fileTypeName }}</span>
+                        <i class="fas fa-fire" style="color: orange;"></i><span>අලුත්<span class="ss-hide">{{ ' ' + fileTypeName }}</span></span>
                     </a>
                 </div>
                 <div id="search-status">{{ 'මෙම ගොනුව තුළ ' + fileTypeName + ' සෙවීම සඳහා ඉහත කොටුවේ type කරන්න.' }}</div>

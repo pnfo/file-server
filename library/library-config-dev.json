@@ -4,7 +4,7 @@
 
     "httpRoot": "/library",
     "serverPort": 8090,
-    "webUrlRoot": "http://192.168.1.107:8090/library/",
+    "webUrlRoot": "http://localhost:8090/library/",
 
     "filesRootFolder": "D:/ebooks",
     "indexHtmlTemplate": "./library/library-template.html",

@@ -8,6 +8,5 @@
 
     "filesRootFolder": "E:/Bhikkus/Pitigala Gunarathna",
     "indexHtmlTemplate": "./cloud/cloud-template.html",
-    "databaseFilePath": "./cloud/cloud-dev.db",
-    "mediafireDataFile": "./cloud/mediafire-gunarathana.json"
+    "databaseFilePath": "./cloud/cloud-dev.db"
 }
