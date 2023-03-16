@@ -14,6 +14,7 @@ const typeToInfo = {
     'png': ['fad fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/png', 'purple'],
     'txt': ['fad fa-file-alt', 'TXT', 'TEXT file එක වෙත පිවිසෙන්න', 'text/plain', 'black'],
     'mp3': ['fad fa-file-audio', 'MP3', 'ධර්ම දේශනාව භාගත කරගන්න', 'audio/mpeg', 'navy'],
+    'm4a': ['fad fa-file-audio', 'M4A', 'ධර්ම දේශනාව භාගත කරගන්න', 'audio/mpeg', 'black'],
     'unk': ['fad fa-file-alt', 'FILE', 'භාගත කරගන්න', 'application/octet-stream', 'darkgreen'], // unknown types
 };
 
@@ -152,7 +153,7 @@ function vueFilePage(data) {
                     <i :class="iconStr" :style="iconStyle"></i>
                     <span>{{ name }}</span>
                 </div>
-                <div v-if="entry.type == 'mp3'">
+                <div v-if="entry.type == 'mp3' || entry.type == 'm4a'">
                     <audio controls :src="webUrl +  entryId + '/download'" preload="auto">
                         Your browser does not support the <code>audio</code> element.
                     </audio>
