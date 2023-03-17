@@ -42,7 +42,7 @@ const computedProps = {
     tipText: function() { return getTypeInfo(this.entry.type)[2]; },
     details: function() {
         if (this.entry.type != 'coll') return this.entry.desc;
-        return `Files: ${this.entry.num_entries}, Size: ${readableSize(this.entry.total_size)}`; 
+        return `ගොනු: ${this.entry.num_entries}, ප්‍රමාණය: ${readableSize(this.entry.total_size)}`; 
     },
     name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`;},
 }
