@@ -24,7 +24,7 @@ async function performSearch(e) {
     if (requestTimer) clearTimeout(requestTimer);
     resultsDiv.empty();
     if (query.length < resultSettings.minQueryLength) {
-        statusDiv.text(`අඩුම තරමේ අකුරු ${resultSettings.minQueryLength} ක් වත් ඇතුළු කරන්න.`);
+        statusDiv.text(`අවම වශයෙන් අකුරු ${resultSettings.minQueryLength} ක් ඇතුල් කරන්න.`);
         return;
     }
     // query could be in roman script
@@ -60,9 +60,9 @@ async function sendSearchQuery(query) {
     if (!numResults) {
         statusDiv.text(`“${query}” යන සෙවුම සඳහා ගැළපෙන නම් කිසිවක් හමුවුයේ නැත. වෙනත් සෙවුමක් උත්සාහ කර බලන්න.`);
     } else if (numResults < resultSettings.maxResults) {
-        statusDiv.text(`“${query}” යන සෙවුම සඳහා ගැළපෙන නම් ${numResults} ක් හමුවුනා.`);
+        statusDiv.text(`“${query}” යන සෙවුම සඳහා ගැළපෙන නම් ${numResults} ක් හමුවිය.`);
     } else {
-        statusDiv.text(`ඔබගේ සෙවුම සඳහා ගැළපෙන නම් ${numResults} කට වඩා හමුවුනා. එයින් මුල් ${resultSettings.maxResults} පහත දැක්වේ.`);
+        statusDiv.text(`ඔබගේ සෙවුම සඳහා ගැළපෙන නම් ${numResults} කට වඩා හමුවිය. එයින් මුල් ${resultSettings.maxResults} පහත දැක්වේ.`);
     }
 }
 
@@ -72,7 +72,7 @@ const clipb = new ClipboardJS('.share-icon', {
         return $('div.content').attr('web-url') + entryId;
     }
 });
-clipb.on('success', e => showToast('link එක copy කර ගත්තා. ඔබට අවශ්‍ය තැන paste කරන්න.'));
+clipb.on('success', e => showToast('සබැඳිය පිටපත් විය. ඔබට අවශ්‍ය තැනක අලවන්න.'));
 
 function showToast(toastMsg) {
     var toast = $('#toast').text(toastMsg).show();
