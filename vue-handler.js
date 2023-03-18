@@ -2,7 +2,7 @@ const Vue = require('vue');
 const vsr = require('vue-server-renderer');
 
 const typeToInfo = {
-    'pdf': ['fad fa-file-pdf', 'PDF', 'පීඩීඑෆ් ගොනුව බාගන්න', 'application/pdf', 'darkred'],
+    'pdf': ['fad fa-file-pdf', 'PDF', 'PDF ගොනුව බාගන්න', 'application/pdf', 'darkred'],
     'htm': ['fad fa-file-code', 'WEB', 'HTML ගොනුව බලන්න', 'text/html', 'blue'],
     //'lin': ['fad fa-link', 'WWW', 'සබැඳිය වෙත පිවිසෙන්න', ''], // redirect to url
     'col': ['fad fa-folder', 'ගොනුව', 'බහාලුම අරින්න', '', 'goldenrod'],
