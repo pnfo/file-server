@@ -155,7 +155,7 @@ function vueFilePage(data) {
                 </div>
                 <div v-if="entry.type == 'mp3' || entry.type == 'm4a'">
                     <audio controls :src="webUrl +  entryId + '/download'" preload="auto">
-                        ඔබගේ අතිරික්සුව <code>audio</code> අංගය සඳහා සහාය නොදක්වයි.
+                        ඔබගේ අතිරික්සුව (browser) <code>audio</code> අංගය සඳහා සහාය නොදක්වයි.
                     </audio>
                 </div>
                 
