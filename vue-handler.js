@@ -8,11 +8,11 @@ const typeToInfo = {
     'col': ['fad fa-folder', 'ගොනුව', 'බහාලුම අරින්න', '', 'goldenrod'],
     'zip': ['fad fa-file-archive', 'ZIP', 'ZIP ගොනුව බාගන්න', 'application/zip', 'darkslategrey'],
     'apk': ['fad fa-mobile-android', 'APP', 'ඇන්ඩ්‍රොයිඩ් යෙදුම ගන්න', 'application/octet-stream', 'green'],
-    'doc': ['fad fa-file-word', 'DOC', 'වර්ඩ් ගොනුව බාගන්න', 'application/octet-stream', 'darkblue'],
-    'xls': ['fad fa-file-excel', 'EXCEL', 'එක්සෙල් වගුව බාගන්න', 'application/octet-stream', 'darkgreen'],
+    'doc': ['fad fa-file-word', 'DOC', 'වර්ඩ් (Word) ගොනුව බාගන්න', 'application/octet-stream', 'darkblue'],
+    'xls': ['fad fa-file-excel', 'EXCEL', 'එක්සෙල් (Excel) වගුව බාගන්න', 'application/octet-stream', 'darkgreen'],
     'jpg': ['fad fa-file-image', 'IMAGE', 'රූපය බාගන්න', 'image/jpeg', 'purple'],
     'png': ['fad fa-file-image', 'IMAGE', 'රූපය බාගන්න', 'image/png', 'purple'],
-    'txt': ['fad fa-file-alt', 'TXT', 'පෙළ ගොනුව බලන්න', 'text/plain', 'black'],
+    'txt': ['fad fa-file-alt', 'TXT', 'පෙළ (Text) ගොනුව බලන්න', 'text/plain', 'black'],
     'mp3': ['fad fa-file-audio', 'MP3', 'ධර්ම දේශනාව බාගන්න', 'audio/mpeg', 'navy'],
     'm4a': ['fad fa-file-audio', 'M4A', 'ධර්ම දේශනාව බාගන්න', 'audio/mpeg', 'black'],
     'unk': ['fad fa-file-alt', 'FILE', 'බාගන්න', 'application/octet-stream', 'darkgreen'], // unknown types
@@ -24,7 +24,7 @@ function getTypeInfo(type) {
     return typeToInfo[type3] || typeToInfo['unk'];
 }
 function readableSize(size) {
-    const sizeUnits = ['බයිට', 'කි.බ.', 'මෙ.බ.', 'ගි.බ.', 'ටෙ.බ.'];
+    const sizeUnits = ['බයිට(Bytes)', 'කි.බ.(KB)', 'මෙ.බ.(MB)', 'ගි.බ.(GB)', 'ටෙ.බ.(TB)'];
     if (!size) return '';
     const i = parseInt(Math.floor(Math.log(size) / Math.log(1024)));
     return Math.round(size / Math.pow(1024, i), 2) + ' ' + sizeUnits[i];
