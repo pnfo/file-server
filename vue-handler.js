@@ -2,20 +2,20 @@ const Vue = require('vue');
 const vsr = require('vue-server-renderer');
 
 const typeToInfo = {
-    'pdf': ['fad fa-file-pdf', 'PDF', 'PDF file එක භාගත කරගන්න', 'application/pdf', 'darkred'],
-    'htm': ['fad fa-file-code', 'WEB', 'HTML file එක වෙත පිවිසෙන්න', 'text/html', 'blue'],
-    //'lin': ['fad fa-link', 'WWW', 'Link එක වෙත පිවිසෙන්න', ''], // redirect to url
-    'col': ['fad fa-folder', 'ගොනුව', 'ගොනුව වෙත පිවිසෙන්න', '', 'goldenrod'],
-    'zip': ['fad fa-file-archive', 'ZIP', 'ZIP file එක භාගත කරගන්න', 'application/zip', 'darkslategrey'],
-    'apk': ['fad fa-mobile-android', 'APP', 'android මෘදුකාංගය ලබාගන්න', 'application/octet-stream', 'green'],
-    'doc': ['fad fa-file-word', 'DOC', 'Word file එක භාගත කරගන්න', 'application/octet-stream', 'darkblue'],
-    'xls': ['fad fa-file-excel', 'EXCEL', 'Excel වගුව භාගත කරගන්න', 'application/octet-stream', 'darkgreen'],
-    'jpg': ['fad fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/jpeg', 'purple'],
-    'png': ['fad fa-file-image', 'IMAGE', 'පින්තූරය භාගත කරගන්න', 'image/png', 'purple'],
-    'txt': ['fad fa-file-alt', 'TXT', 'TEXT file එක වෙත පිවිසෙන්න', 'text/plain', 'black'],
-    'mp3': ['fad fa-file-audio', 'MP3', 'ධර්ම දේශනාව භාගත කරගන්න', 'audio/mpeg', 'navy'],
-    'm4a': ['fad fa-file-audio', 'M4A', 'ධර්ම දේශනාව භාගත කරගන්න', 'audio/mpeg', 'black'],
-    'unk': ['fad fa-file-alt', 'FILE', 'භාගත කරගන්න', 'application/octet-stream', 'darkgreen'], // unknown types
+    'pdf': ['fad fa-file-pdf', 'PDF', 'PDF ගොනුව බාගන්න', 'application/pdf', 'darkred'],
+    'htm': ['fad fa-file-code', 'WEB', 'HTML ගොනුව බලන්න', 'text/html', 'blue'],
+    //'lin': ['fad fa-link', 'WWW', 'සබැඳිය වෙත පිවිසෙන්න', ''], // redirect to url
+    'col': ['fad fa-folder', 'ගොනුව', 'බහාලුම අරින්න', '', 'goldenrod'],
+    'zip': ['fad fa-file-archive', 'ZIP', 'ZIP ගොනුව බාගන්න', 'application/zip', 'darkslategrey'],
+    'apk': ['fad fa-mobile-android', 'APP', 'ඇන්ඩ්‍රොයිඩ් යෙදුම ගන්න', 'application/octet-stream', 'green'],
+    'doc': ['fad fa-file-word', 'DOC', 'වර්ඩ් (Word) ගොනුව බාගන්න', 'application/octet-stream', 'darkblue'],
+    'xls': ['fad fa-file-excel', 'EXCEL', 'එක්සෙල් (Excel) වගුව බාගන්න', 'application/octet-stream', 'darkgreen'],
+    'jpg': ['fad fa-file-image', 'IMAGE', 'රූපය බාගන්න', 'image/jpeg', 'purple'],
+    'png': ['fad fa-file-image', 'IMAGE', 'රූපය බාගන්න', 'image/png', 'purple'],
+    'txt': ['fad fa-file-alt', 'TXT', 'පෙළ (Text) ගොනුව බලන්න', 'text/plain', 'black'],
+    'mp3': ['fad fa-file-audio', 'MP3', 'ධර්ම දේශනාව බාගන්න', 'audio/mpeg', 'navy'],
+    'm4a': ['fad fa-file-audio', 'M4A', 'ධර්ම දේශනාව බාගන්න', 'audio/mpeg', 'black'],
+    'unk': ['fad fa-file-alt', 'FILE', 'බාගන්න', 'application/octet-stream', 'darkgreen'], // unknown types
 };
 
 function getTypeInfo(type) {
@@ -24,7 +24,7 @@ function getTypeInfo(type) {
     return typeToInfo[type3] || typeToInfo['unk'];
 }
 function readableSize(size) {
-    const sizeUnits = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const sizeUnits = ['බයිට(Bytes)', 'කි.බ.(KB)', 'මෙ.බ.(MB)', 'ගි.බ.(GB)', 'ටෙ.බ.(TB)'];
     if (!size) return '';
     const i = parseInt(Math.floor(Math.log(size) / Math.log(1024)));
     return Math.round(size / Math.pow(1024, i), 2) + ' ' + sizeUnits[i];
@@ -42,7 +42,7 @@ const computedProps = {
     tipText: function() { return getTypeInfo(this.entry.type)[2]; },
     details: function() {
         if (this.entry.type != 'coll') return this.entry.desc;
-        return `Files: ${this.entry.num_entries}, Size: ${readableSize(this.entry.total_size)}`; 
+        return `ගොනු: ${this.entry.num_entries}, ප්‍රමාණය: ${readableSize(this.entry.total_size)}`; 
     },
     name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`;},
 }
@@ -75,9 +75,9 @@ const componentList = {
             <thead><tr>
                 <td class="name"><i class="fad fa-book"></i> නම</td>
                 <td class="share"></td>
-                <td v-show="columns.includes('folder')" class="folder"><i class="fad fa-folder"></i> ගොනුව</td>
-                <td v-show="columns.includes('downloads')" class="downloads"><i class="fad fa-tally"></i><span class="ss-hide"> භාගත ගණන</span></td>
-                <td v-show="columns.includes('date_added')" class="date_added"><i class="fad fa-calendar"></i><span class="ss-hide"> එකතුකළ දිනය</span></td>
+                <td v-show="columns.includes('folder')" class="folder"><i class="fad fa-folder"></i> බහාලුම</td>
+                <td v-show="columns.includes('downloads')" class="downloads"><i class="fad fa-tally"></i><span class="ss-hide"> බාගැනීම් ගණන</span></td>
+                <td v-show="columns.includes('date_added')" class="date_added"><i class="fad fa-calendar"></i><span class="ss-hide"> එක් කළ දිනය</span></td>
                 <td v-show="columns.includes('size')" class="size"><i class="fad fa-database"></i><span class="ss-hide"> ප්‍රමාණය</span></td>
             </tr></thead>
             <tbody>
@@ -116,7 +116,7 @@ const componentList = {
                         <i class="fas fa-fire" style="color: orange;"></i><span>අලුත්<span class="ss-hide">{{ ' ' + fileTypeName }}</span></span>
                     </a>
                 </div>
-                <div id="search-status">{{ 'මෙම ගොනුව තුළ ' + fileTypeName + ' සෙවීම සඳහා ඉහත කොටුවේ type කරන්න.' }}</div>
+                <div id="search-status">{{ 'මෙම ගොනුව තුළ ' + fileTypeName + ' සෙවීම සඳහා ඉහත කොටුවේ ලියන්න.' }}</div>
                 <div id="search-results"></div>
             </div>
         </div>`
@@ -155,13 +155,13 @@ function vueFilePage(data) {
                 </div>
                 <div v-if="entry.type == 'mp3' || entry.type == 'm4a'">
                     <audio controls :src="webUrl +  entryId + '/download'" preload="auto">
-                        Your browser does not support the <code>audio</code> element.
+                        ඔබගේ අතිරික්සුව (browser) <code>audio</code> අංගය සඳහා සහාය නොදක්වයි.
                     </audio>
                 </div>
                 
-                <div class="downloads"><span>භාගත කරන ලද වාර ගණන : </span>{{ downloads }}</div>
-                <div class="date_added"><span>වෙබ් අඩවියට ඇතුල් කල දිනය : </span>{{ entry.date_added }}</div>
-                <div class="size"><span>file එකේ ප්‍රමාණය (size) : </span>{{ sizeStr }}</div>
+                <div class="downloads"><span>බාගැනීම් ගණන : </span>{{ downloads }}</div>
+                <div class="date_added"><span>එක් කළ දිනය : </span>{{ entry.date_added }}</div>
+                <div class="size"><span>ගොනුවේ ප්‍රමාණය : </span>{{ sizeStr }}</div>
 
                 <div class="download-button">
                     <a class="button" :href="webUrl +  entryId + '/download'">
@@ -171,14 +171,14 @@ function vueFilePage(data) {
 
                 <div>
                     <a class="button share-icon">
-                        <i class="fad fa-share-alt"></i> share කිරීම සඳහා link එකක් ලබාගන්න
+                        <i class="fad fa-share-alt"></i> බෙදාගැනීමට සබැඳියක් ගන්න
                     </a>
                 </div>
 
                 <div v-if="details.length" class="entry-details">{{ details }}</div>
-                <div v-if="details.length < 10" class="file-details">මේ පොත ඔබ කියවා තිබේනම් හෝ පොත ගැන යම් විස්තරයක් දන්නේ නම් 
-                    මේ පිටුවට පැමිණෙන අයට දැනගැනීම පිණිස මෙතැන පලකිරීමට සුදුසු යම් විස්තරයක් හැඳින්වීමක් ඔබට ලියා අප වෙත email කරන්න. 
-                    පොතේ link එකද සඳහන් කිරීමට අමතක කරන්න එපා. සිංහලෙන් හෝ ඉංග්‍රීසියෙන් ලියන්න. සිංග්ලිෂ් වලින් ලිවීමෙන් වලකින්න. 
+                <div v-if="details.length < 10" class="file-details"ඉහත පොත ඔබ කියවා ඇත්නම් හෝ වැදගත් බාහිර තොරතුරු දන්නවා නම් 
+                    මෙම පිටුවට ගොඩවදින අයට දැනගැනීම පිණිස මෙතැන පළ කිරීමට උචිත විස්තරයක් ලියා අප වෙත වි-තැපෑලක් එවන්න. 
+                    පොතට අදාළ සබැඳියක් සඳහන් කිරීමට අමතක නොකරන්න. සිංහලෙන් හෝ ඉංග්‍රීසියෙන් ලියන්න. සිංග්ලිෂ් වලින් ලිවීමෙන් වලකින්න. 
                 </div>
             </div>
         </div>`,
