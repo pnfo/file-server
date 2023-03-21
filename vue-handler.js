@@ -24,7 +24,7 @@ function getTypeInfo(type) {
     return typeToInfo[type3] || typeToInfo['unk'];
 }
 function readableSize(size) {
-    const sizeUnits = ['බයිට(Bytes)', 'කි.බ.(KB)', 'මෙ.බ.(MB)', 'ගි.බ.(GB)', 'ටෙ.බ.(TB)'];
+    const sizeUnits = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     if (!size) return '';
     const i = parseInt(Math.floor(Math.log(size) / Math.log(1024)));
     return Math.round(size / Math.pow(1024, i), 2) + ' ' + sizeUnits[i];
