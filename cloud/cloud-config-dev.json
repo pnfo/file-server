@@ -8,5 +8,5 @@
 
     "s3RootFolder": "cloud-dev",
     "indexHtmlTemplate": "./cloud/cloud-template.html",
-    "idToDownloadsFile": "./cloud/id-to-downloads-dev.json"
+    "idToInfoFile": "./cloud/id-to-info-dev.json"
 }

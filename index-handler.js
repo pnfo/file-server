@@ -40,22 +40,22 @@ export class IndexHandler {
         this.config = config
         this.s3Hander = new S3Handler(config.s3RootFolder) 
         this.indexLoaded = false
-        this.downloadsLastWrite = Date.now()
+        this.idInfoLastWrite = Date.now()
         this.indexStats = { numFiles: 0, numFolders: 0 }
     }
 
     async incrementDownloads(id) {
         if (!this.files[id]) return
         this.files[id].downloads++
-        await this.checkWriteDownloads(false)
+        await this.checkWriteInfo(false)
     }
-    async checkWriteDownloads(forceWrite) {
+    async checkWriteInfo(forceWrite) {
         if (!this.indexLoaded) return // can't write anything until the index is first loaded
-        if (forceWrite || this.downloadsLastWrite < Date.now() - 3600 * 1000) { // every one hour write to file
-            const idToDownloads = {}
-            Object.entries(this.files).forEach(([id, {downloads}]) => idToDownloads[id] = downloads)
-            await fs.promises.writeFile(this.config.idToDownloadsFile, vkb.json(JSON.stringify(idToDownloads)), 'utf-8')
-            this.downloadsLastWrite = Date.now()
+        if (forceWrite || this.idInfoLastWrite < Date.now() - 3600 * 1000) { // every one hour write to file
+            const idToInfos = {}
+            Object.entries(this.files).forEach(([id, {downloads, dateAdded}]) => idToInfos[id] = {downloads, dateAdded})
+            await fs.promises.writeFile(this.config.idToInfoFile, vkb.json(JSON.stringify(idToInfos)), 'utf-8')
+            this.idInfoLastWrite = Date.now()
         }
     }
 
@@ -63,11 +63,11 @@ export class IndexHandler {
     async refreshIndex() {
         const entries = await this.s3Hander.list('', true) // get all
 
-        await this.checkWriteDownloads(true) // make sure to write any updates before reading
-        const idToDownloads = JSON.parse(fs.readFileSync(this.config.idToDownloadsFile, 'utf-8'))
-        if (this.indexLoaded) { // take any updated values from the existing index
-            Object.entries(this.files).forEach(([id, {downloads}]) => idToDownloads[id] = downloads)
-        }
+        await this.checkWriteInfo(true) // make sure to write any updates before reading
+        const idToInfos = JSON.parse(fs.readFileSync(this.config.idToInfoFile, 'utf-8'))
+        // if (this.indexLoaded) { // take any updated values from the existing index
+        //     Object.entries(this.files).forEach(([id, {downloads}]) => idToInfos[id].downloads = downloads)
+        // }
         this.folders = {}
         this.files = {}
         
@@ -81,8 +81,9 @@ export class IndexHandler {
             if (this.files[id]) {
                 return console.error(`id ${id} already exists in the entries list in ${e.Key} ignoring file`)
             }
-            const parents = generateParents(prefix)
-            this.files[id] = {...e, name, desc, type, downloads: idToDownloads[id] || 0, id, parents}
+            const parents = generateParents(prefix), 
+                {downloads, dateAdded} = idToInfos[id] || {downloads: 0, dateAdded: getDate(new Date())}
+            this.files[id] = {...e, name, desc, type, id, parents, downloads, dateAdded}
 
             parents.forEach(({name, id, Key}) => {
                 if (this.folders[id]) {
@@ -127,7 +128,7 @@ export class IndexHandler {
         return this.getAll(entryId).filter(({Key}) => Key.split('/').length == folderDepth + 1)
     }
     getRecentlyAdded(prefix, pastDate) {
-        return this.getAll(prefix).filter(({LastModified}) => LastModified && LastModified > pastDate)
+        return this.getAll(prefix).filter(({dateAdded}) => dateAdded && dateAdded > getDate(pastDate))
     }
     
     search(entryId, queryTerms) {

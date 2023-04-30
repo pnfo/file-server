@@ -8,30 +8,32 @@
  * 4) search by folder
  * 
  * 3rd party dependencies
- * npm install restify vue vue-server-renderer sqlite3
+ * npm install restify vue vue-server-renderer
  * 
  * dev run as follows (windows)
  * npx nodemon node-server.js library/library-config-dev.json
- * dev writes to a dev db and does not write to the production db
+ * dev writes to a dev json file and does not write to the production json file
  * 
  * prod run as follows (ubuntu)
  * pm2 start node-server.js --name library -f -- library-config.json
  * params after -- are passed to the node script
  * pm2 save (save after changing any process parameters)
  * 
- * git push from the production server regularly to backup the production db to git
+ * git push from the production server regularly to backup the production json to git
  */
-const fs = require('fs'), path = require('path');
-const vkb = require('vkbeautify');
-const bi = require('./build-index');
-const singlish = require('./singlish');
-const password = require('./passwords')
+import fs from 'fs'
+import path from 'path'
+import vkb from 'vkbeautify'
+import { IndexHandler } from './index-handler.js'
+import { password } from './passwords.js'
+import { getPossibleMatches } from '@pnfo/singlish-search'
 
-const restify = require('restify');
+import restify from 'restify';
 const server = restify.createServer({maxParamLength: 1000});
-server.use(restify.plugins.bodyParser());
+//server.pre(restify.pre.sanitizePath()) // removes any trailing slashes from the url
+server.use(restify.plugins.bodyParser())
 
-const sendError = (res, err) => { res.send(500, err.toString()); res.end(); };
+const sendError = (res, err) => { res.send(500, err.stack); res.end(); };
 const sendHtml = (res, html) => {
     res.setHeader('Content-Type', 'text/html');
     res.sendRaw(200, html);
@@ -43,25 +45,38 @@ console.log(`reading config file ${cmdArgs[0]}`);
 const config = JSON.parse(fs.readFileSync(cmdArgs[0], {encoding: 'utf-8'}));
 console.log(`config file ${JSON.stringify(config)}`);
 
-const vh = require('./vue-handler');
-const [pageRR, searchRR] = vh.setupVueSSR(config);
+import { setupVueSSR, vueListPage, vueFilePage, vueSearchResult, getTypeInfo } from './vue-handler.js'
+const [pageRR, searchRR] = setupVueSSR(config);
 
-const dh = require('./db-handler');
-const db = new dh.DbHandler(config);
+const ih = new IndexHandler(config)
 
 const getContext = (parents, extra) => ({ 
-    title: extra + (parents ? (parents.slice(-1)[0].name + ' ගොනුව') : config.rootFolderName + ' මුල් පිටුව'), 
+    title: extra + (parents.length ? (parents.slice(-1)[0].name + ' ගොනුව') : config.rootFolderName + ' මුල් පිටුව'), 
     webUrl: config.webUrlRoot,
 });
 
-// return all books page
-server.get(`${config.httpRoot}/:entryId/all`, async function(req, res, next) {
+// reload the files list from s3 and also get the next entry id to be used
+server.get(`${config.httpRoot}/refresh/:password`, async function(req, res) {
     try {
-        const entryId = parseInt(req.params.entryId);
-        const [entries, parents] = await db.getAll(entryId);
-        console.log(`all files has ${entries.length} files`);
-        const data = { entries, parents, entryId, columns: ['size', 'folder'] };
-        const html = await pageRR.renderToString(vh.vueListPage(data), getContext(parents, 'සියලු පොත් < '));
+        if (req.params.password != password) {
+            return sendError(res, `supplied password ${req.params.password} is not correct.`);
+        }
+        const stats = await ih.refreshIndex()
+        const statsStr = vkb.json(JSON.stringify(stats))
+        sendHtml(res, statsStr);
+    } catch(err) {
+        sendError(res, err);
+    }
+});
+
+// return all books page - prefix could be empty if root folder
+server.get(`${config.httpRoot}/:folderId/all`, async function(req, res) {
+    try {
+        const folderId = parseInt(req.params.folderId)
+        const entries = ih.getAll(folderId), folder = ih.getFolder(folderId)
+        console.log(`all files in entryId ${folderId} has ${entries.length} files`)
+        const data = { entries, folder, columns: ['size', 'folder'] }
+        const html = await pageRR.renderToString(vueListPage(data), getContext(folder.parents, 'සියලු පොත් < '));
         sendHtml(res, html);
     } catch(err) {
         sendError(res, err);
@@ -69,15 +84,14 @@ server.get(`${config.httpRoot}/:entryId/all`, async function(req, res, next) {
 });
 
 // return newly added books page
-server.get(`${config.httpRoot}/:entryId/newly-added/:duration`, async function(req, res, next) {
+server.get(`${config.httpRoot}/:folderId/newly-added/:duration`, async function(req, res) {
     try {
-        const backDays = isNaN(req.params.duration) ? 90 : req.params.duration;
-        const pastDate = bi.getDate(new Date(new Date().setDate(new Date().getDate() - backDays)));
-        const entryId = parseInt(req.params.entryId);
-        const [entries, parents] = await db.getRecentlyAdded(entryId, pastDate);
-        console.log(`recent files in ${entryId} from ${backDays}:${pastDate} has ${entries.length} files`);
-        const data = { entries, parents, entryId, columns: ['size', 'date_added'] };
-        const html = await pageRR.renderToString(vh.vueListPage(data), getContext(parents, 'අලුත් පොත් < '));
+        const backDays = isNaN(req.params.duration) ? 90 : req.params.duration, folderId = parseInt(req.params.folderId)
+        const pastDate = new Date(Date.now() - backDays * 24 * 60 * 60 * 1000)
+        const entries = ih.getRecentlyAdded(folderId, pastDate), folder = ih.getFolder(folderId)
+        console.log(`recent files in ${folderId} from ${backDays}:${pastDate} has ${entries.length} files`);
+        const data = { entries, folder, columns: ['size', 'date_added'] };
+        const html = await pageRR.renderToString(vueListPage(data), getContext(folder.parents, 'අලුත් පොත් < '));
         sendHtml(res, html);
     } catch(err) {
         sendError(res, err);
@@ -85,48 +99,47 @@ server.get(`${config.httpRoot}/:entryId/newly-added/:duration`, async function(r
 });
 
 // return page with list of entries in that folder rendered
-server.get(`${config.httpRoot}/:entryId`, async function(req, res, next) {
+server.get(`${config.httpRoot}/:entryId`, async function(req, res) {
     try {
-        const entryId = parseInt(req.params.entryId);
-        const entry = await db.getEntry(entryId);
-        if (entryId == 0 || entry.type == 'coll') { // root folder or sub folder
-            console.log(`view folder page ${entryId} : ${entryId ? entry.name : 'root folder'}`);
-            const [entries, parents] = await db.getChildren(entryId);
-            const data = { entries, parents, entryId, columns: ['size', 'downloads'] };
-            const html = await pageRR.renderToString(vh.vueListPage(data), getContext(parents, ''));
-            sendHtml(res, html);
-        } else {
-            console.log(`view file page ${entryId} : ${entry.name}`)
-            const data = { entry, parents: db.parentsMap[entry.folder], entryId }
-            const context = { title: entry.name, webUrl: config.webUrlRoot }
-            const html = await pageRR.renderToString(vh.vueFilePage(data), context)
+        const entryId = parseInt(req.params.entryId)
+        const file = ih.getFile(entryId)
+        if (file) {
+            console.log(`view file page ${file.id} : ${file.name}`)
+            const data = { entry: file }
+            const context = { title: file.name, webUrl: config.webUrlRoot }
+            const html = await pageRR.renderToString(vueFilePage(data), context)
             sendHtml(res, html)
+        } else {
+            const folder = ih.getFolder(entryId)
+            const entries = ih.getChildren(folder.id) // direct children
+            console.log(`view folder page ${folder.id || 'root folder'} with ${entries.length} entries`);
+            const data = { entries, folder, columns: ['size', 'downloads'] };
+            const html = await pageRR.renderToString(vueListPage(data), getContext(folder.parents, ''));
+            sendHtml(res, html);
         }
     } catch(err) {
         sendError(res, err);
     }
 });
 
-server.get(`${config.httpRoot}/:entryId/download`, async function(req, res, next) {
+const createFilename = ({name, desc, type}) => name + (desc ? `[${desc}]` : '') + '.' + type
+server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
     try {
-        const entryId = parseInt(req.params.entryId);
-        const entry = await db.getEntry(entryId);
-        if (entryId == 0 || entry.type == 'coll') { // root folder or sub folder
-            sendError(res, 'Can not download folder')
-            return
+        const entryId = parseInt(req.params.entryId), file = ih.getFile(entryId)
+        if (isNaN(req.params.entryId) || !file) {
+            return sendError(res, `Invalid file id ${entryId} specified or file does not exist`)
         }
-        console.log(`download file ${entryId} : ${entry.name}.${entry.type}`);
-        db.incrementDownloads(entryId); // increment download count
+        console.log(`download file ${file.id} : ${file.name}.${file.type}`);
+        await ih.incrementDownloads(file.id); // increment download count
 
-        const contentDisposition = entry.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
-        const fileName = encodeURI(   // chrome does not like comma in filename - so it is removed
-            dh.createFileName({name: entry.name, desc: entry.desc, rowid: '', type: entry.type}).replace(/,/g, ''));
+        const contentDisposition = file.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
+        // chrome does not like comma in filename - so it is removed
+        const filename = encodeURI(createFilename(file).replace(/,/g, ''));
         res.writeHead(200, {
-            "Content-Type": `${vh.getTypeInfo(entry.type)[3]}; charset=utf-8`,
-            "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${fileName}`,
+            "Content-Type": `${getTypeInfo(file.type)[3]}; charset=utf-8`,
+            "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${filename}`,
         });
-        //const filePath = path.join(config.filesRootFolder, db.getUrl(entry));
-        const stream = fs.createReadStream(db.getUrl(entry));
+        const stream = await ih.readStream(file.Key);
         stream.on('error', err => sendError(res, err));
         stream.pipe(res, {end: true});
     } catch(err) { 
@@ -135,46 +148,24 @@ server.get(`${config.httpRoot}/:entryId/download`, async function(req, res, next
 });
 
 // search index and return rendered html
-server.post(`${config.httpRoot}/api/search/`, async function(req, res, next) {
+server.post(`${config.httpRoot}/api/search/`, async function(req, res) {
     try {
-        const body = JSON.parse(req.body);
-        // Search all singlish_combinations of translations from roman to sinhala
-        const queryTerms = singlish.getTerms(body.query);
-        const entries = await db.search(body.entryId, queryTerms);
-        console.log(`for query ${body.query} num. of terms ${queryTerms.length}, files found ${entries.length}`);
+        const body = JSON.parse(req.body)
+        const terms = getPossibleMatches(body.query) // get all singlish possibilities 
+        const entries = ih.search(body.entryId, [...terms, body.query]) // include the original query in case English name
+        console.log(`for query ${body.query}, singlish terms: ${terms.length}/${terms.slice(0, 5)}..., entries found ${entries.length}`);
         const data = { entries, columns: ['size', 'folder'] };
-        const html = await searchRR.renderToString(vh.vueSearchResult(data));
+        const html = await searchRR.renderToString(vueSearchResult(data));
         sendHtml(res, html);
     } catch(err) {
         sendError(res, err);
     }
 });
 
-// rebuild index on some folder - 0 for root folder
-server.get(`${config.httpRoot}/api/rebuild-index/:folderId/:password`, function(req, res, next) {
-    const folderId = parseInt(req.params.folderId);
-    if (isNaN(folderId) || (folderId && !db.rowid2Row[folderId])) {
-        sendError(res, `supplied folderid is not correct.`);
-        return;
-    }
-    if (req.params.password != password.word) {
-        sendError(res, `supplied password ${req.params.password} is not correct.`);
-        return;
-    }
-    const folderFilesRoot = path.join(config.filesRootFolder, folderId ? db.folderPaths[folderId] : '');
-    bi.rebuildIndex(db, folderFilesRoot, folderId, false).then(dbStats => {
-        const dbStatsStr = vkb.json(JSON.stringify(dbStats))
-        console.log(`rebuild index on ${folderFilesRoot} final stats ${dbStatsStr}`);
-        res.send(200, dbStats);
-    }).catch(err => {
-        sendError(res, err);
-    });
-});
-
 // get static files
 server.get(`${config.httpRoot}/static/*`, function (req, res, next) {
-    const filePath = req.url.substr(req.url.indexOf('/static/'));
-    const fullPath = path.join(__dirname, filePath);
+    const filePath = req.url.substring(req.url.indexOf('/static/'));
+    const fullPath = path.join('.', filePath)
     const stream = fs.createReadStream(fullPath);
     stream.on('error', err => sendError(res, err));
     stream.pipe(res, {end: true});
@@ -182,7 +173,7 @@ server.get(`${config.httpRoot}/static/*`, function (req, res, next) {
 
 async function runServer() {
     try {
-        await db.initFolderStructure();        
+        await ih.refreshIndex()
         server.on('close', () => db.close()); //cleanup
         server.listen(config.serverPort);
         console.log(`server listening at ${config.serverPort}`);

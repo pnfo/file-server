@@ -8,5 +8,5 @@
 
     "s3RootFolder": "library-dev",
     "indexHtmlTemplate": "./library/library-template.html",
-    "idToDownloadsFile": "./library/id-to-downloads-dev.json"
+    "idToInfoFile": "./library/id-to-info-dev.json"
 }

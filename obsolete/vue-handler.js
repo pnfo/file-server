@@ -1,6 +1,5 @@
-import Vue from 'vue'
-import vsr from 'vue-server-renderer'
-import fs from 'fs'
+const Vue = require('vue');
+const vsr = require('vue-server-renderer');
 
 const typeToInfo = {
     'pdf': ['fad fa-file-pdf', 'PDF', 'PDF ගොනුව බාගත කරගන්න', 'application/pdf', 'darkred'],
@@ -19,7 +18,7 @@ const typeToInfo = {
     'unk': ['fad fa-file-alt', 'FILE', 'බාගත කරගන්න', 'application/octet-stream', 'darkgreen'], // unknown types
 };
 
-export function getTypeInfo(type) {
+function getTypeInfo(type) {
     let type3 = type.substr(0, 3);
     if (type3 == 'jpeg') type3 = 'jpg';
     return typeToInfo[type3] || typeToInfo['unk'];
@@ -37,27 +36,25 @@ function formatNumber(num) {
 const computedProps = {
     downloads: function() { return formatNumber(this.entry.downloads); },
     //typeStr: function() { return getTypeInfo(this.entry.type)[1]; },
-    sizeStr: function() { return readableSize(this.entry.Size); },
+    sizeStr: function() { return readableSize(this.entry.size); },
     iconStr: function() { return getTypeInfo(this.entry.type)[0]; },
     iconStyle: function() { return 'color:' + getTypeInfo(this.entry.type)[4]; },
     tipText: function() { return getTypeInfo(this.entry.type)[2]; },
     details: function() {
         if (this.entry.type != 'coll') return this.entry.desc;
-        return `ගොනු ගණන: ${this.entry.num_entries}`; // , ප්‍රමාණය: ${readableSize(this.entry.total_size)}
+        return `ගොනු: ${this.entry.num_entries}, ප්‍රමාණය: ${readableSize(this.entry.total_size)}`; 
     },
-    name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`},
-    parent: function() { return this.entry.parents.length ? this.entry.parents.slice(-1)[0] : null },
-    dateModified: function() { return this.entry.LastModified ? this.entry.LastModified.toISOString().split('T')[0] : '' },
- }
+    name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`;},
+}
 
 const componentList = {
     'entry': {
         props: ['entry', 'columns'],
         computed: computedProps,
         // folder_name need to be added to the entry/row
-        template: `<tr class="entry" :entry-id="entry.id">
+        template: `<tr class="entry" :entry-id="entry.rowid">
             <td class="name">
-                <a :class="'entry-name ' + entry.type" :tip="tipText" :href="webUrl + entry.id">
+                <a :class="'entry-name ' + entry.type" :tip="tipText" :href="webUrl + entry.rowid">
                     <i v-bind:class="iconStr" :style="iconStyle"></i>
                     <span>
                         <span>{{ name }}</span>
@@ -66,9 +63,9 @@ const componentList = {
                 </a>
             </td>
             <td><i class="fad fa-share-alt share-icon"></i></td>
-            <td v-show="columns.includes('folder')" class="folder"><a v-if="parent" :href="webUrl + parent.id">{{ parent.name }}</a></td>
+            <td v-show="columns.includes('folder')" class="folder"><a :href="webUrl + entry.folder">{{ entry.folder_name }}</a></td>
             <td v-show="columns.includes('downloads')" class="downloads">{{ downloads }}</td>
-            <td v-show="columns.includes('date_added')" class="date_added">{{ dateModified }}</td>
+            <td v-show="columns.includes('date_added')" class="date_added">{{ entry.date_added }}</td>
             <td v-show="columns.includes('size')" class="size">{{ sizeStr }}</td>
         </tr>`,
     },
@@ -101,7 +98,7 @@ const componentList = {
                     <i class="fad fa-caret-right" style="color: gray; font-size: 1rem;"></i>
                 </div>
                 <div v-for="folder in parents" class="nav-link">
-                    <a v-bind:href="webUrl + folder.id">
+                    <a v-bind:href="webUrl + folder.rowid">
                         <i class="fad fa-folder" style="color:goldenrod;"></i><span>{{ folder.name }}</span>
                     </a>
                     <i class="fad fa-caret-right" style="color: gray; font-size: 1rem;"></i>
@@ -112,7 +109,7 @@ const componentList = {
                 <div id="search-bar-div">
                     <i class="fad fa-search" style="padding: 0rem 0.3rem;"></i>
                     <input class="search-bar" type="text" :placeholder="fileTypeName + ' සොයන්න'">
-                    <a class="button" :href="webUrl + entryId + '/all'">
+                    <a class="button" :href="webUrl +  entryId + '/all'">
                         <i class="fas fa-books" style="color: green;"></i><span>සියලු<span class="ss-hide">{{ ' ' + fileTypeName }}</span></span>
                     </a>
                     <a class="button" :href="webUrl + entryId + '/newly-added/90'">
@@ -126,30 +123,30 @@ const componentList = {
     },
 }
 
-export function vueSearchResult(data) {
+function vueSearchResult(data) {
     return new Vue({
         data: data,
         template: `<entry-list v-if="entries.length" v-bind:entries="entries" :columns="columns"></entry-list>`,
     });
 }
 
-export function vueListPage(data) {
+function vueListPage(data) {
     return new Vue({
         data: data,
-        template: `<div class="content" :entry-id="folder.id" :web-url="webUrl">
-            <top-nav :parents="folder.parents" :entry-id="folder.id"></top-nav>
+        template: `<div class="content" :entry-id="entryId" :web-url="webUrl">
+            <top-nav :parents="parents" :entry-id="entryId"></top-nav>
             <entry-list v-if="entries.length" v-bind:entries="entries" :columns="columns"></entry-list>
             <div class="empty-placeholder" v-if="!entries.length">මෙම ගොනුව හිස්ය.</div>
         </div>`,
     });
 }
 
-export function vueFilePage(data) {
+function vueFilePage(data) {
     return new Vue({
         data: data,
         computed: computedProps,
-        template: `<div class="content" :entry-id="entry.id" :web-url="webUrl">
-            <top-nav :parents="entry.parents" :entry-id="entry.id"></top-nav>
+        template: `<div class="content" :entry-id="entryId" :web-url="webUrl">
+            <top-nav :parents="parents" :entry-id="entryId"></top-nav>
             
             <div class="file-info">
                 <div :class="'file-name ' + entry.type">
@@ -157,17 +154,17 @@ export function vueFilePage(data) {
                     <span>{{ name }}</span>
                 </div>
                 <div v-if="entry.type == 'mp3' || entry.type == 'm4a'">
-                    <audio controls :src="webUrl + entry.id + '/download'" preload="auto">
+                    <audio controls :src="webUrl +  entryId + '/download'" preload="auto">
                         ඔබගේ අතිරික්සුව (browser) <code>audio</code> අංගය සඳහා සහාය නොදක්වයි.
                     </audio>
                 </div>
                 
                 <div class="downloads"><span>බාගත කිරීම් ගණන : </span>{{ downloads }}</div>
-                <div class="date_added"><span>වෙබ් අඩවියට එක් කළ දිනය : </span>{{ dateModified }}</div>
+                <div class="date_added"><span>වෙබ් අඩවියට එක් කළ දිනය : </span>{{ entry.date_added }}</div>
                 <div class="size"><span>ගොනුවේ ප්‍රමාණය : </span>{{ sizeStr }}</div>
 
                 <div class="download-button">
-                    <a class="button" :href="webUrl + entry.id + '/download'">
+                    <a class="button" :href="webUrl +  entryId + '/download'">
                         <i class="fas fa-download" style="color: green;"></i><span>{{ tipText }}</span>
                     </a>
                 </div>
@@ -189,7 +186,7 @@ export function vueFilePage(data) {
 }
 
 //let webUrl;
-export function setupVueSSR(config) {
+function setupVueSSR(config) {
     //webUrl = webUrlRoot;
     Vue.component('entry', componentList['entry']);
     Vue.component('entry-list', componentList['entry-list']);
@@ -202,8 +199,10 @@ export function setupVueSSR(config) {
         }; },
     });
     const pageRR = vsr.createRenderer({
-        template: fs.readFileSync(config.indexHtmlTemplate, 'utf-8'),
+        template: require('fs').readFileSync(config.indexHtmlTemplate, 'utf-8'),
     });
     const searchRR = vsr.createRenderer();
     return [pageRR, searchRR];
 }
+
+module.exports = { vueSearchResult, vueListPage, vueFilePage, getTypeInfo, setupVueSSR };
