@@ -18,7 +18,7 @@ function extractSqlite(dbFile, outputFile) {
         rows.forEach(row => {
           if (idToDownloads[row.id]) console.error(`id ${row.id} already exists`)
           if (row.type == 'coll') return
-          idToDownloads[row.id] = row.downloads
+          idToDownloads[row.id] = {downloads: row.downloads, dateAdded: row.date_added}
         });
 
         fs.writeFileSync(outputFile, vkb.json(JSON.stringify(idToDownloads)), 'utf-8')
@@ -27,7 +27,7 @@ function extractSqlite(dbFile, outputFile) {
 
     db.close();
 }
-//extractSqlite('library/library.db', 'library/id-to-downloads.json')
+//extractSqlite('cloud/cloud.db', 'cloud/id-to-info-dev.json')
 
 
 import { S3Handler } from './s3-hander.js'
@@ -48,7 +48,7 @@ async function uploadFolderToS3(inputPath, extraPrefixes) {
     if (stats.isFile()) {
       const uploadParams = {
         Key: [...extraPrefixes, file].join('/'),
-        Body: await fs.promises.readFile(filePath),
+        Body: fs.createReadStream(filePath), //await fs.promises.readFile(filePath),
         ContentType: getTypeInfo(file.split('.').slice(-1)[0])[3],
         Metadata: {
           'last-modified': stats.mtime.toISOString(),
@@ -67,7 +67,13 @@ async function uploadFolderToS3(inputPath, extraPrefixes) {
 
   }
 };
-const folderPath = 'මාන්කඩවල සුදස්සන හිමි{910}'
-//uploadFolderToS3('/datadrive/public/library/' + folderPath, folderPath.split('/'))
-uploadFolderToS3('/datadrive/public/library', [])
+const folderPath = 'මෘදුකාංග{450}'
+//const folderPath = 'රේරුකානේ චන්ද්‍රවිමල හිමි{462}'
+//const folderPath = 'වෙනත් ත්‍රිපිටක{682}'
+//const folderPath = 'වෙනත්{514}'
+//const folderPath = 'සිංහල අට්ඨකථා{623}'
+//const folderPath = 'සිංහල භාෂාව{949}'
+//const folderPath = 'සූත්‍ර{645}'
+uploadFolderToS3('/datadrive/public/library/' + folderPath, folderPath.split('/'))
+//uploadFolderToS3('/datadrive/public/library', [])
 //uploadFolderToS3('/Users/janaka/Downloads/test{1}', ['test{1}'])
