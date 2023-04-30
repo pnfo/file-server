@@ -19,6 +19,6 @@
     "vue-server-renderer": "^2.6.10"
   },
   "devDependencies": {
-    "nodemon": "^1.19.4"
+    "nodemon": "^2.0.22"
   }
 }
