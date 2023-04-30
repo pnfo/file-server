@@ -6,8 +6,7 @@
     "serverPort": 8090,
     "webUrlRoot": "https://tipitaka.lk/library/",
 
-    "filesRootFolder": "/datadrive/public/library",
+    "s3RootFolder": "library",
     "indexHtmlTemplate": "./library/library-template.html",
-    "databaseFilePath": "./library/library.db",
-    "mediafireDataFile": "./library/mediafire-stats.json"
+    "idToDownloadsFile": "./library/id-to-downloads.json"
 }
