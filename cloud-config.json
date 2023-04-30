@@ -6,8 +6,7 @@
     "serverPort": 8091,
     "webUrlRoot": "https://tipitaka.lk/cloud/",
 
-    "filesRootFolder": "/datadrive/public/cloud",
+    "s3RootFolder": "cloud",
     "indexHtmlTemplate": "./cloud/cloud-template.html",
-    "databaseFilePath": "./cloud/cloud.db",
-    "mediafireDataFile": "./cloud/mediafire-katukurunde.json"
+    "idToDownloadsFile": "./cloud/id-to-downloads.json"
 }

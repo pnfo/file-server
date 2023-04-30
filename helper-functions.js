@@ -33,7 +33,7 @@ function extractSqlite(dbFile, outputFile) {
 import { S3Handler } from './s3-hander.js'
 import { getTypeInfo } from './vue-handler-new.js'
 
-const sh = new S3Handler('cloud')
+const sh = new S3Handler('library')
 // recursively uploads a local folder to s3, preserving path and file names
 async function uploadFolderToS3(inputPath, extraPrefixes) {
   const files = await fs.promises.readdir(inputPath);
@@ -68,5 +68,6 @@ async function uploadFolderToS3(inputPath, extraPrefixes) {
   }
 };
 const folderPath = 'මාන්කඩවල සුදස්සන හිමි{910}'
-uploadFolderToS3('/datadrive/public/cloud/' + folderPath, folderPath.split('/'))
+//uploadFolderToS3('/datadrive/public/library/' + folderPath, folderPath.split('/'))
+uploadFolderToS3('/datadrive/public/library', [])
 //uploadFolderToS3('/Users/janaka/Downloads/test{1}', ['test{1}'])
