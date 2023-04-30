@@ -19,7 +19,7 @@
  * params after -- are passed to the node script
  * pm2 save (save after changing any process parameters)
  * 
- * git push from the production server regularly to backup the production json to git
+ * git checkin the updated idToinfo json files from the server regularly
  */
 import fs from 'fs'
 import path from 'path'

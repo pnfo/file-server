@@ -1,11 +1,13 @@
 /**
  * GUIDE
  * File name format - name[desc]{rowid}.type
- * Specify {rowid} for all files manually, including new files
- * reuse the rowid of the old file when replacing it with a new file, it will carry forward the download count and the links
+ * Specify {rowid} for all files/folders manually, including new files/folders
+ * reuse the rowid of the old file when replacing it with a new file, it will carry forward the download count and added date
  * 
  * update: 2020 april - rebuild index is now not recursive, mediafire code commented out
- * update: 2023 april - rebuild index now reads s3 buckets instead of filesystem, mediafire code deleted
+ * update: 2023 april - rebuild index now reads s3 buckets instead of filesystem, 
+ *      instead of sqlite use a local json file to store downloads count and date added.
+ *      unused db related code moved to obsolete folder
  */
 "use strict";
 
@@ -21,13 +23,6 @@ function parseFileName(fileName) {
     const res = /^(.+?)(?:\[(.*)\])?(?:\{(\d+)\})?(?:\.(\w+))?$/.exec(fileName);
     if (!res) console.error(`File name ${fileName} can not be parsed`);
     return {name: res[1].trim(), desc: res[2] || '', id: res[3] || 0, type: res[4] || 'coll'};
-}
-
-function createFileName({name, desc, entryId, type}) {
-    desc = desc ? `[${desc}]` : '';
-    entryId = entryId ? `{${entryId}}` : '';
-    type = type != 'coll' ? `.${type}` : '';
-    return `${name}${desc}${entryId}${type}`;
 }
 
 function generateParents(prefix) {
@@ -65,9 +60,6 @@ export class IndexHandler {
 
         await this.checkWriteInfo(true) // make sure to write any updates before reading
         const idToInfos = JSON.parse(fs.readFileSync(this.config.idToInfoFile, 'utf-8'))
-        // if (this.indexLoaded) { // take any updated values from the existing index
-        //     Object.entries(this.files).forEach(([id, {downloads}]) => idToInfos[id].downloads = downloads)
-        // }
         this.folders = {}
         this.files = {}
         
@@ -78,17 +70,21 @@ export class IndexHandler {
             if (!id) {
                 return console.error(`file without id ignored ${e.Key}`)
             }
-            if (this.files[id]) {
-                return console.error(`id ${id} already exists in the entries list in ${e.Key} ignoring file`)
+            if (this.files[id] || this.folders[id]) {
+                throw new Error(`duplicate id in ${(this.files[id] || this.folders[id]).Key} and ${e.Key}. fix and refresh again.`)
             }
             const parents = generateParents(prefix), 
                 {downloads, dateAdded} = idToInfos[id] || {downloads: 0, dateAdded: getDate(new Date())}
             this.files[id] = {...e, name, desc, type, id, parents, downloads, dateAdded}
 
             parents.forEach(({name, id, Key}) => {
-                if (this.folders[id]) {
-                    this.folders[id].num_entries++
-                    this.folders[id].Size += e.Size
+                const folder = this.folders[id]
+                if (this.files[id] || (folder && folder.Key != Key)) {
+                    throw new Error(`duplicate id in ${(this.files[id] || folder).Key} and ${Key}. fix and refresh again.`)
+                }
+                if (folder) {
+                    folder.num_entries++
+                    folder.Size += e.Size
                 } else {
                     this.folders[id] = {name, id, num_entries: 1, Size: e.Size, Key, type: 'coll', parents: generateParents(Key)}
                 }
