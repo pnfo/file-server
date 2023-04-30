@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, HeadObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, 
+    HeadObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import {accessKeyId, secretAccessKey} from './passwords.js'
 import { Readable } from 'stream'
 
@@ -86,5 +87,3 @@ export class S3Handler {
 // sh.list('').then(l => l.forEach(f => console.log(f)))
 // sh.exists('test/hal-tool.html').then(r => console.log(r))
 // sh.readFile('test/test/hal-tool.html').then(s => console.log(s))
-
-//module.exports = { S3Handler }

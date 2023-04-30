@@ -2,7 +2,7 @@
 import fs from 'fs'
 import path from 'path'
 import vkb from 'vkbeautify'
-import sqlite3 from 'sqlite3'
+//import sqlite3 from 'sqlite3'
 
 function extractSqlite(dbFile, outputFile) {
     const db = new sqlite3.Database(dbFile);
@@ -27,13 +27,13 @@ function extractSqlite(dbFile, outputFile) {
 
     db.close();
 }
-extractSqlite('library/library.db', 'library/id-to-downloads.json')
+//extractSqlite('library/library.db', 'library/id-to-downloads.json')
 
 
 import { S3Handler } from './s3-hander.js'
 import { getTypeInfo } from './vue-handler-new.js'
 
-const sh = new S3Handler('cloud-dev')
+const sh = new S3Handler('cloud')
 // recursively uploads a local folder to s3, preserving path and file names
 async function uploadFolderToS3(inputPath, extraPrefixes) {
   const files = await fs.promises.readdir(inputPath);
@@ -57,7 +57,7 @@ async function uploadFolderToS3(inputPath, extraPrefixes) {
  
       try {
         await sh.upload(uploadParams)
-        //console.log(`Successfully uploaded ${filePath} to S3 bucket at ${uploadParams.Key}`);
+        console.log(`uploaded ${filePath} to S3 bucket at ${uploadParams.Key}`);
       } catch (err) {
         console.error(`Error uploading ${filePath} to S3 bucket at ${uploadParams.Key}`, err);
       }
@@ -67,5 +67,6 @@ async function uploadFolderToS3(inputPath, extraPrefixes) {
 
   }
 };
-//uploadFolderToS3('/datadrive/public/cloud/මාන්කඩවල සුදස්සන හිමි{910}/', '')
+const folderPath = 'මාන්කඩවල සුදස්සන හිමි{910}'
+uploadFolderToS3('/datadrive/public/cloud/' + folderPath, folderPath.split('/'))
 //uploadFolderToS3('/Users/janaka/Downloads/test{1}', ['test{1}'])
