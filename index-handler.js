@@ -71,6 +71,7 @@ export class IndexHandler {
                 return console.error(`file without id ignored ${e.Key}`)
             }
             if (this.files[id] || this.folders[id]) {
+                this.indexLoaded = false // prevent id info being written to file
                 throw new Error(`duplicate id in ${(this.files[id] || this.folders[id]).Key} and ${e.Key}. fix and refresh again.`)
             }
             const parents = generateParents(prefix), 
@@ -80,6 +81,7 @@ export class IndexHandler {
             parents.forEach(({name, id, Key}) => {
                 const folder = this.folders[id]
                 if (this.files[id] || (folder && folder.Key != Key)) {
+                    this.indexLoaded = false // prevent id info being written to file
                     throw new Error(`duplicate id in ${(this.files[id] || folder).Key} and ${Key}. fix and refresh again.`)
                 }
                 if (folder) {
