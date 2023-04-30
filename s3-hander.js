@@ -1,14 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, 
     HeadObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import {accessKeyId, secretAccessKey} from './passwords.js'
-import { Readable } from 'stream'
-
-const streamToString = (stream) => new Promise((resolve, reject) => {
-    const chunks = [];
-    stream.on('data', (chunk) => chunks.push(chunk));
-    stream.on('error', reject);
-    stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-});
 
 export class S3Handler {
     constructor(rootPrefix) {
@@ -26,14 +18,15 @@ export class S3Handler {
     async list(prefix, getAll = false) {
         const params = { Bucket: this.bucketName, Prefix: this.addRoot(prefix) }
         if (!getAll) params.Delimiter = '/' // not get subfolder content
-        const command = new ListObjectsV2Command(params)
 
-        let allContent = [], continuationToken = null // needed when there are more than 1000 objects
+        let allContent = [], ContinuationToken = null // needed when there are more than 1000 objects
         do {
-            let { Contents, NextContinuationToken } = await this.s3.send(command)
+            let { Contents, NextContinuationToken } = 
+                await this.s3.send(new ListObjectsV2Command({...params, ContinuationToken}))
             allContent.push(...Contents)
-            continuationToken = NextContinuationToken
-        } while (continuationToken)
+            ContinuationToken = NextContinuationToken
+            console.log(`contents length = ${Contents.length}. continuation ${ContinuationToken}`)
+        } while (ContinuationToken)
 
         return allContent.slice(1).map(e => ({...e, Key: this.removeRoot(e.Key)}))
     }
