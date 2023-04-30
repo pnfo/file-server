@@ -75,8 +75,8 @@ export class S3Handler {
         await this.s3.send(new DeleteObjectCommand(deleteParams));
     }
 
-    async upload(key, uploadParams) {
-        uploadParams.Key = this.addRoot(key)
+    async upload(uploadParams) {
+        uploadParams.Key = this.addRoot(uploadParams.Key)
         uploadParams.Bucket = this.bucketName
         await this.s3.send(new PutObjectCommand(uploadParams));
     }

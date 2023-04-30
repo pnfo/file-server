@@ -6,8 +6,7 @@
     "serverPort": 8090,
     "webUrlRoot": "http://localhost:8090/library/",
 
-    "filesRootFolder": "D:/ebooks",
+    "s3RootFolder": "library-dev",
     "indexHtmlTemplate": "./library/library-template.html",
-    "databaseFilePath": "./library/library-dev.db",
-    "mediafireDataFile": "./library/mediafire-stats.json"
+    "idToDownloadsFile": "./library/id-to-downloads-dev.json"
 }

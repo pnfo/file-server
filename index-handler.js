@@ -10,7 +10,7 @@
 "use strict";
 
 import fs from 'fs'
-import * as vkb from 'vkbeautify'
+import vkb from 'vkbeautify'
 import { S3Handler } from './s3-hander.js'
 
 export const getDate = (date) => date.toISOString().split('T')[0];
@@ -47,10 +47,11 @@ export class IndexHandler {
     async incrementDownloads(id) {
         if (!this.files[id]) return
         this.files[id].downloads++
-        await this.checkWriteDownloads()
+        await this.checkWriteDownloads(false)
     }
-    async checkWriteDownloads() {
-        if (this.downloadsLastWrite < Date.now() - 3600 * 1000 && this.indexLoaded) { // every one hour write to file
+    async checkWriteDownloads(forceWrite) {
+        if (!this.indexLoaded) return // can't write anything until the index is first loaded
+        if (forceWrite || this.downloadsLastWrite < Date.now() - 3600 * 1000) { // every one hour write to file
             const idToDownloads = {}
             Object.entries(this.files).forEach(([id, {downloads}]) => idToDownloads[id] = downloads)
             await fs.promises.writeFile(this.config.idToDownloadsFile, vkb.json(JSON.stringify(idToDownloads)), 'utf-8')
@@ -62,7 +63,7 @@ export class IndexHandler {
     async refreshIndex() {
         const entries = await this.s3Hander.list('', true) // get all
 
-        await this.checkWriteDownloads() // make sure to write any updates before reading
+        await this.checkWriteDownloads(true) // make sure to write any updates before reading
         const idToDownloads = JSON.parse(fs.readFileSync(this.config.idToDownloadsFile, 'utf-8'))
         if (this.indexLoaded) { // take any updated values from the existing index
             Object.entries(this.files).forEach(([id, {downloads}]) => idToDownloads[id] = downloads)
@@ -93,8 +94,8 @@ export class IndexHandler {
             })
             
         });
-        console.log(this.files)
-        console.log(this.folders)
+        //console.log(this.files)
+        //console.log(this.folders)
         this.indexLoaded = true
 
         const numFiles = Object.keys(this.files).length, numFolders = Object.keys(this.folders).length,

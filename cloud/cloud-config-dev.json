@@ -6,7 +6,7 @@
     "serverPort": 8091,
     "webUrlRoot": "http://localhost:8091/cloud/",
 
-    "filesRootFolder": "E:/Bhikkus/Pitigala Gunarathna",
+    "s3RootFolder": "cloud-dev",
     "indexHtmlTemplate": "./cloud/cloud-template.html",
-    "databaseFilePath": "./cloud/cloud-dev.db"
+    "idToDownloadsFile": "./cloud/id-to-downloads-dev.json"
 }
