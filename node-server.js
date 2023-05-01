@@ -185,7 +185,6 @@ server.get(`${config.httpRoot}/static/*`, function (req, res, next) {
     const stream = fs.createReadStream(fullPath);
     stream.on('error', err => sendError(res, err));
     stream.pipe(res, {end: true});
-    return next()
 });
 
 async function runServer() {
