@@ -1,6 +1,8 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, 
     HeadObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import {accessKeyId, secretAccessKey} from './passwords.js'
+//import {pdf2pic} from 'pdf2pic'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 export class S3Handler {
     constructor(rootPrefix) {
@@ -54,7 +56,7 @@ export class S3Handler {
         }
     }
     
-    async rename(oldKey, newKey) {
+    async rename(oldKey, newKey) { // not used
         console.log(`rename from ${oldKey} to ${newKey}`)
         const copyParams = {
             Bucket: this.bucketName,
@@ -73,6 +75,51 @@ export class S3Handler {
         uploadParams.Key = this.addRoot(uploadParams.Key)
         uploadParams.Bucket = this.bucketName
         await this.s3.send(new PutObjectCommand(uploadParams));
+    }
+
+    async getSignedUrl(key, expiresIn) {
+        const command = new GetObjectCommand({ Bucket: this.bucketName, Key: this.addRoot(key) });
+        return getSignedUrl(this.s3, command, { expiresIn });
+    }
+
+    async recomputeThumbnails(Key) {
+        const s3 = new S3Client({ region: "your-region" });
+
+        const converter = new pdf2pic({
+            density: 100,
+            savename: "untitled",
+            savedir: "/tmp",
+            format: "jpeg",
+            size: {
+                height: 1000,
+            },
+            quality: 40,
+        });
+
+        const {Body: pdfBuffer} = await s3.send(new GetObjectCommand({
+            Bucket: this.bucketName,
+            Key: this.addRoot(Key)
+        }));
+
+        // Convert PDF to images
+        const { data: images } = await converter.convert(pdfBuffer, [1, Math.ceil(converter.numberOfPages / 2)]);
+
+        // Upload images to S3
+        await Promise.all(
+            images.map(async (imageData, index) => {
+                const putObjectParams = {
+                    Bucket: this.bucketName,
+                    Key: this.addRoot(`thumbs/${outputPrefix}-${index}.jpg`),
+                    Body: imageData,
+                    ACL: "public-read",
+                };
+                await s3.send(new PutObjectCommand(putObjectParams));
+            })
+        );
+        console.log("Images saved successfully.");
+
+        processPdf();
+
     }
 }
 

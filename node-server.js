@@ -122,7 +122,6 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res) {
     }
 });
 
-const createFilename = ({name, desc, type}) => name + (desc ? `[${desc}]` : '') + '.' + type
 server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
     try {
         const entryId = parseInt(req.params.entryId), file = ih.getFile(entryId)
@@ -132,20 +131,37 @@ server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
         console.log(`download file ${file.id} : ${file.name}.${file.type}`);
         await ih.incrementDownloads(file.id); // increment download count
 
-        const contentDisposition = file.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
-        // chrome does not like comma in filename - so it is removed
-        const filename = encodeURI(createFilename(file).replace(/,/g, ''));
-        res.writeHead(200, {
-            "Content-Type": `${getTypeInfo(file.type)[3]}; charset=utf-8`,
-            "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${filename}`,
-        });
-        const stream = await ih.readStream(file.Key);
-        stream.on('error', err => sendError(res, err));
-        stream.pipe(res, {end: true});
+        const signedUrl = await ih.getSignedUrl(file.Key, 60)
+        res.redirect(302, signedUrl, () => {});
     } catch(err) { 
         sendError(res, err); 
     }
 });
+
+// const createFilename = ({name, desc, type}) => name + (desc ? `[${desc}]` : '') + '.' + type
+// server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
+//     try {
+//         const entryId = parseInt(req.params.entryId), file = ih.getFile(entryId)
+//         if (isNaN(req.params.entryId) || !file) {
+//             return sendError(res, `Invalid file id ${entryId} specified or file does not exist`)
+//         }
+//         console.log(`download file ${file.id} : ${file.name}.${file.type}`);
+//         await ih.incrementDownloads(file.id); // increment download count
+
+//         const contentDisposition = file.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
+//         // chrome does not like comma in filename - so it is removed
+//         const filename = encodeURI(createFilename(file).replace(/,/g, ''));
+//         res.writeHead(200, {
+//             "Content-Type": `${getTypeInfo(file.type)[3]}; charset=utf-8`,
+//             "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${filename}`,
+//         });
+//         const stream = await ih.readStream(file.Key);
+//         stream.on('error', err => sendError(res, err));
+//         stream.pipe(res, {end: true});
+//     } catch(err) { 
+//         sendError(res, err); 
+//     }
+// });
 
 // search index and return rendered html
 server.post(`${config.httpRoot}/api/search/`, async function(req, res) {

@@ -137,4 +137,5 @@ export class IndexHandler {
     async readStream(key) {
         return this.s3Hander.readFile(key)
     }
+    async getSignedUrl(key, expiresIn) { return this.s3Hander.getSignedUrl(key, expiresIn) }
 }
