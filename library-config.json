@@ -8,5 +8,6 @@
 
     "s3RootFolder": "library",
     "indexHtmlTemplate": "./library/library-template.html",
-    "idToInfoFile": "./library/id-to-info.json"
+    "idToInfoFile": "./library/id-to-info.json",
+    "displayThumbs": true
 }

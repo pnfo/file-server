@@ -50,9 +50,14 @@ const [pageRR, searchRR] = setupVueSSR(config);
 
 const ih = new IndexHandler(config)
 
+const ogImageUrl = config.webUrlRoot + 'static/og-library-500x300.jpg'
+const getOgImage = ({type, id}) => (type == 'pdf' && config.displayThumbs) ?
+    `https://tipitaka.sgp1.cdn.digitaloceanspaces.com/${config.s3RootFolder}/thumbs/${id}-0.jpg` : ogImageUrl
+    
+// the variables in the template html file need to be passed in separately
 const getContext = (parents, extra) => ({ 
     title: extra + (parents.length ? (parents.slice(-1)[0].name + ' ගොනුව') : config.rootFolderName + ' මුල් පිටුව'), 
-    webUrl: config.webUrlRoot,
+    webUrl: config.webUrlRoot, ogImageUrl
 });
 
 // reload the files list from s3 and also get the next entry id to be used
@@ -106,7 +111,7 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res) {
         if (file) {
             console.log(`view file page ${file.id} : ${file.name}`)
             const data = { entry: file }
-            const context = { title: file.name, webUrl: config.webUrlRoot }
+            const context = { title: file.name, webUrl: config.webUrlRoot, ogImageUrl: getOgImage(file) }
             const html = await pageRR.renderToString(vueFilePage(data), context)
             sendHtml(res, html)
         } else {
@@ -122,6 +127,9 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res) {
     }
 });
 
+// reading big files from s3 and piping them through to the response was causing this error in the kernal after some time
+// "TCP: out of memory -- consider tuning tcp_mem" and 100% cpu load. So generate a signed url and redirect to download directly from s3
+// this opens pdfs in the browser directly instead of downloading though. but users can save afterwords
 server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
     try {
         const entryId = parseInt(req.params.entryId), file = ih.getFile(entryId)
@@ -131,37 +139,12 @@ server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
         console.log(`download file ${file.id} : ${file.name}.${file.type}`);
         await ih.incrementDownloads(file.id); // increment download count
 
-        const signedUrl = await ih.getSignedUrl(file.Key, 60)
+        const signedUrl = await ih.getSignedUrl(file.Key, 600)
         res.redirect(302, signedUrl, () => {});
     } catch(err) { 
         sendError(res, err); 
     }
 });
-
-// const createFilename = ({name, desc, type}) => name + (desc ? `[${desc}]` : '') + '.' + type
-// server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
-//     try {
-//         const entryId = parseInt(req.params.entryId), file = ih.getFile(entryId)
-//         if (isNaN(req.params.entryId) || !file) {
-//             return sendError(res, `Invalid file id ${entryId} specified or file does not exist`)
-//         }
-//         console.log(`download file ${file.id} : ${file.name}.${file.type}`);
-//         await ih.incrementDownloads(file.id); // increment download count
-
-//         const contentDisposition = file.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
-//         // chrome does not like comma in filename - so it is removed
-//         const filename = encodeURI(createFilename(file).replace(/,/g, ''));
-//         res.writeHead(200, {
-//             "Content-Type": `${getTypeInfo(file.type)[3]}; charset=utf-8`,
-//             "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${filename}`,
-//         });
-//         const stream = await ih.readStream(file.Key);
-//         stream.on('error', err => sendError(res, err));
-//         stream.pipe(res, {end: true});
-//     } catch(err) { 
-//         sendError(res, err); 
-//     }
-// });
 
 // search index and return rendered html
 server.post(`${config.httpRoot}/api/search/`, async function(req, res) {
@@ -198,6 +181,32 @@ async function runServer() {
     }
 }
 runServer();
+
+
+// const createFilename = ({name, desc, type}) => name + (desc ? `[${desc}]` : '') + '.' + type
+// server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
+//     try {
+//         const entryId = parseInt(req.params.entryId), file = ih.getFile(entryId)
+//         if (isNaN(req.params.entryId) || !file) {
+//             return sendError(res, `Invalid file id ${entryId} specified or file does not exist`)
+//         }
+//         console.log(`download file ${file.id} : ${file.name}.${file.type}`);
+//         await ih.incrementDownloads(file.id); // increment download count
+
+//         const contentDisposition = file.type.substr(0, 3) == 'htm' ? 'inline' : 'attachment';
+//         // chrome does not like comma in filename - so it is removed
+//         const filename = encodeURI(createFilename(file).replace(/,/g, ''));
+//         res.writeHead(200, {
+//             "Content-Type": `${getTypeInfo(file.type)[3]}; charset=utf-8`,
+//             "Content-Disposition": `${contentDisposition}; filename*=UTF-8''${filename}`,
+//         });
+//         const stream = await ih.readStream(file.Key);
+//         stream.on('error', err => sendError(res, err));
+//         stream.pipe(res, {end: true});
+//     } catch(err) { 
+//         sendError(res, err); 
+//     }
+// });
 
 /*
 // return page with one entry and thumbnails/info etc

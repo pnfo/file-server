@@ -70,6 +70,13 @@ a.button i { padding: 0 0.4rem 0 0.1rem; }
 div.download-button { font-size: 1.5rem; padding: 1rem 0rem; font-family: 'Sinhala Styled'; }
 div.download-button a.button { padding: 0.5rem; }
 
+.thumbs { display: flex; flex-wrap: wrap; margin: 1rem 0 1rem 0;}
+.thumbs img { max-width: 100%; object-fit: contain; margin: 0.5rem; border: 1px solid black; max-height: 750px;}
+@media (min-width: 1000px) {
+    .thumbs { flex-wrap: nowrap; }
+    .thumbs img { width: 50%; height: auto; max-width: 50%;}
+}
+
 .share-icon { color: gray; cursor: pointer; padding: 0.2rem;}
 .share-icon:hover { color: blue; }
 i.share-icon { font-size: 0.8rem; }

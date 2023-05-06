@@ -47,8 +47,6 @@ const computedProps = {
     },
     name: function() { return `${this.entry.name}${this.entry.type != 'coll'? '.' + this.entry.type : ''}`},
     parent: function() { return this.entry.parents.length ? this.entry.parents.slice(-1)[0] : null },
-    //dateModified: function() { return this.entry.LastModified ? this.entry.LastModified.toISOString().split('T')[0] : '' },
-    //dateAdded: function() { return this.entry.dateAdded }
  }
 
 const componentList = {
@@ -179,11 +177,19 @@ export function vueFilePage(data) {
                     </a>
                 </div>
 
-                <div v-if="details.length" class="entry-details">{{ details }}</div>
-                <div v-if="details.length < 10" class="file-details">ඉහත පොත ඔබ කියවා ඇත්නම් හෝ පොත ගැන යම් වැදගත් විස්තරයක් දන්නේ නම්, එය
-                    මෙම පිටුවට පැමිණෙන අයගේ ද දැනගැනීම පිණිස මෙතැන පළ කිරීමට උචිත ලෙස ලියා අප වෙත email කරන්න. 
-                    පොතට අදාළ සබැඳිය ද සඳහන් කිරීමට අමතක නොකරන්න. සිංහලෙන් හෝ ඉංග්‍රීසියෙන් ලියන්න. සිංග්ලිෂ් වලින් ලිවීමෙන් වලකින්න. 
+                <div v-if="entry.type == 'pdf' && displayThumbs">
+                    <p>පොතේ මුල් සහ මැද පිටු වල ඡායාරූප පහතින් බලන්න.</p>
+                    <div class="thumbs">
+                        <img :src="'https://tipitaka.sgp1.cdn.digitaloceanspaces.com/' + s3RootFolder + '/thumbs/' + entry.id + '-0.jpg'"></img>
+                        <img :src="'https://tipitaka.sgp1.cdn.digitaloceanspaces.com/' + s3RootFolder + '/thumbs/' + entry.id + '-1.jpg'"></img>
+                    </div>
                 </div>
+
+                <!--<div v-if="details.length" class="entry-details">{{ details }}</div>
+                <div v-if="details.length < 10" class="file-details">ඉහත පොත ඔබ කියවා ඇත්නම් හෝ පොත ගැන යම් වැදගත් විස්තරයක් දන්නේ නම්, එය
+                     මෙම පිටුවට පැමිණෙන අයගේ ද දැනගැනීම පිණිස මෙතැන පළ කිරීමට උචිත ලෙස ලියා අප වෙත email කරන්න. 
+                     පොතට අදාළ සබැඳිය ද සඳහන් කිරීමට අමතක නොකරන්න. සිංහලෙන් හෝ ඉංග්‍රීසියෙන් ලියන්න. සිංග්ලිෂ් වලින් ලිවීමෙන් වලකින්න. 
+                </div>-->
             </div>
         </div>`,
     });
@@ -200,6 +206,8 @@ export function setupVueSSR(config) {
             webUrl: config.webUrlRoot, 
             fileTypeName: config.fileTypeName,
             rootFolderName: config.rootFolderName,
+            s3RootFolder: config.s3RootFolder,
+            displayThumbs: config.displayThumbs || false,
         }; },
     });
     const pageRR = vsr.createRenderer({

@@ -13,17 +13,10 @@
 
 import fs from 'fs'
 import vkb from 'vkbeautify'
-import { S3Handler } from './s3-hander.js'
+import { S3Handler, parseFileName } from './s3-hander.js'
 
 export const getDate = (date) => date.toISOString().split('T')[0];
 const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-function parseFileName(fileName) {
-    // name[desc]{entryId}.type - [desc] is optional, {entryId} will have to filled to be the next available id
-    const res = /^(.+?)(?:\[(.*)\])?(?:\{(\d+)\})?(?:\.(\w+))?$/.exec(fileName);
-    if (!res) console.error(`File name ${fileName} can not be parsed`);
-    return {name: res[1].trim(), desc: res[2] || '', id: res[3] || 0, type: res[4] || 'coll'};
-}
 
 function generateParents(prefix) {
     const parts = prefix.split('/')
@@ -64,19 +57,13 @@ export class IndexHandler {
         this.files = {}
         
         entries.forEach(e => {
-            if (e.Key.endsWith('/')) return // ignore any folder entries
-            const fileName = e.Key.split('/').slice(-1)[0], prefix = e.Key.split('/').slice(0, -1).join('/')
-            const {name, desc, id, type} = parseFileName(fileName)
-            if (!id) {
-                return console.error(`file without id ignored ${e.Key}`)
-            }
-            if (this.files[id] || this.folders[id]) {
+            if (this.files[e.id] || this.folders[e.id]) {
                 this.indexLoaded = false // prevent id info being written to file
-                throw new Error(`duplicate id in ${(this.files[id] || this.folders[id]).Key} and ${e.Key}. fix and refresh again.`)
+                throw new Error(`duplicate id in ${(this.files[e.id] || this.folders[e.id]).Key} and ${e.Key}. fix and refresh again.`)
             }
-            const parents = generateParents(prefix), 
-                {downloads, dateAdded} = idToInfos[id] || {downloads: 0, dateAdded: getDate(new Date())}
-            this.files[id] = {...e, name, desc, type, id, parents, downloads, dateAdded}
+            const parents = generateParents(e.prefix), 
+                {downloads, dateAdded} = idToInfos[e.id] || {downloads: 0, dateAdded: getDate(new Date())}
+            this.files[e.id] = {...e, parents, downloads, dateAdded}
 
             parents.forEach(({name, id, Key}) => {
                 const folder = this.folders[id]
