@@ -64,7 +64,7 @@ const getContext = (parents, extra) => ({
 server.get(`${config.httpRoot}/refresh/:password`, async function(req, res) {
     try {
         if (req.params.password != password) {
-            return sendError(res, `supplied password ${req.params.password} is not correct.`);
+            throw new Error(`supplied password ${req.params.password} is not correct.`)
         }
         const stats = await ih.refreshIndex()
         const statsStr = vkb.json(JSON.stringify(stats))
@@ -116,6 +116,7 @@ server.get(`${config.httpRoot}/:entryId`, async function(req, res) {
             sendHtml(res, html)
         } else {
             const folder = ih.getFolder(entryId)
+            if (!folder) throw new Error(`provided id ${entryId} does not exist`)
             const entries = ih.getChildren(folder.id) // direct children
             console.log(`view folder page ${folder.id || 'root folder'} with ${entries.length} entries`);
             const data = { entries, folder, columns: ['size', 'downloads'] };
@@ -134,7 +135,7 @@ server.get(`${config.httpRoot}/:entryId/download`, async function(req, res) {
     try {
         const entryId = parseInt(req.params.entryId), file = ih.getFile(entryId)
         if (isNaN(req.params.entryId) || !file) {
-            return sendError(res, `Invalid file id ${entryId} specified or file does not exist`)
+            throw new Error(`Invalid file id ${entryId} specified or file does not exist`)
         }
         console.log(`download file ${file.id} : ${file.name}.${file.type}`);
         await ih.incrementDownloads(file.id); // increment download count

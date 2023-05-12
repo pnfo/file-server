@@ -103,4 +103,4 @@ async function recomputeThumbnails(startId, endId = 0, recomputeAll = false) {
  * some thumbs have been manually edited to remove whitespace, so recompute only the new pdfs
  * startId and endId are inclusive
  **/
-recomputeThumbnails(601, 700, false)
+recomputeThumbnails(1010, 1010, false)
