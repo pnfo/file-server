@@ -15,7 +15,8 @@
  * dev writes to a dev json file and does not write to the production json file
  * 
  * prod run as follows (ubuntu)
- * pm2 start node-server.js --name library -f -- library-config.json
+    pm2 start node-server.js --name library --cron-restart="0 0 * * *" -f -- library-config.json
+    pm2 start node-server.js --name cloud -f -- cloud-config.json
  * params after -- are passed to the node script
  * pm2 save (save after changing any process parameters)
  * 
